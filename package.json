@@ -1,0 +1,1 @@
+{"dependencies":{"hono":"^4.7.0"},"description":"Aplikasi penilaian projek produk (olahan nanas & makanan ringan) untuk kelas 7, 8, 9 — Bun + Hono + SQLite","name":"gezymuse-nilai-projek","scripts":{"dev":"bun --watch run src/index.ts","start":"bun run src/index.ts","test":"bun test"},"type":"module","version":"1.0.0"}

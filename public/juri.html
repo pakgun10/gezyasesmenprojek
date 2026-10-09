@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Penilaian Projek — Juri</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="no-print">
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <span class="brand"><a href="index.html">📋 Penilaian Projek</a></span>
+        <span class="spacer"></span>
+        <span id="juri-nama" class="who"></span>
+        <button id="btn-logout" class="btn btn-ghost btn-sm hidden" type="button">Keluar</button>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div id="alert" class="alert hidden"></div>
+
+      <!-- 1. Login juri -->
+      <section id="view-login">
+        <div class="card narrow">
+          <h2>🧑‍⚖️ Login Juri</h2>
+          <p class="muted small">Masukkan kode juri dan PIN yang diberikan panitia.</p>
+          <form id="form-login">
+            <div class="form-group">
+              <label for="kode">Kode Juri</label>
+              <input type="text" id="kode" name="kode" autocomplete="username" placeholder="cth: JURI1" required>
+            </div>
+            <div class="form-group">
+              <label for="pin">PIN</label>
+              <input type="password" id="pin" name="pin" inputmode="numeric" autocomplete="current-password" placeholder="4–8 digit angka" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" id="btn-login">Masuk</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- 2. Pilih kelas -->
+      <section id="view-kelas" class="hidden">
+        <h2>Pilih Kelas</h2>
+        <div id="kelas-list" class="grid"></div>
+      </section>
+
+      <!-- 3. Daftar kelompok -->
+      <section id="view-kelompok" class="hidden">
+        <button type="button" id="btn-back-kelas" class="btn btn-ghost btn-sm">← Pilih Kelas</button>
+        <h2 id="kelompok-title">Daftar Kelompok</h2>
+        <div id="kelompok-list" class="grid"></div>
+      </section>
+
+      <!-- 4. Form nilai -->
+      <section id="view-nilai" class="hidden">
+        <button type="button" id="btn-back-kelompok" class="btn btn-ghost btn-sm">← Daftar Kelompok</button>
+        <div id="nilai-head" class="card"></div>
+        <div id="kategori-list"></div>
+
+        <section id="foto-section" class="card hidden">
+          <h3>📷 Foto Produk</h3>
+          <p class="muted small">
+            Semua nilai tersimpan ✔️. Silakan lampirkan foto produk kelompok ini
+            (boleh lebih dari satu, maks. 8 MB per foto).
+          </p>
+          <div id="foto-list" class="foto-grid"></div>
+          <div class="form-group">
+            <label for="foto-input">Pilih / ambil foto</label>
+            <input type="file" id="foto-input" accept="image/*" capture="environment" multiple>
+          </div>
+          <div class="form-group">
+            <label for="foto-caption">Caption <span class="hint">(opsional, maks. 200 karakter)</span></label>
+            <input type="text" id="foto-caption" maxlength="200" placeholder="cth: Tampak depan produk">
+          </div>
+          <button type="button" id="btn-upload" class="btn btn-primary">⬆️ Upload Foto</button>
+          <div id="upload-info" class="muted small" style="margin-top:8px"></div>
+        </section>
+
+        <div class="actions">
+          <button type="button" id="btn-selesai" class="btn btn-success btn-block">✅ Selesai — Kembali ke Daftar</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/juri.js"></script>
+</body>
+</html>

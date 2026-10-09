@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Penilaian Projek — Admin</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="no-print">
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <span class="brand"><a href="index.html">📋 Penilaian Projek</a></span>
+        <span class="spacer"></span>
+        <span id="admin-nama" class="who"></span>
+        <button id="btn-logout" class="btn btn-ghost btn-sm hidden" type="button">Keluar</button>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div id="alert" class="alert hidden"></div>
+
+      <!-- Login admin -->
+      <section id="view-login">
+        <div class="card narrow">
+          <h2>⚙️ Login Admin</h2>
+          <form id="form-login">
+            <div class="form-group">
+              <label for="username">Username</label>
+              <input type="text" id="username" name="username" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input type="password" id="password" name="password" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" id="btn-login">Masuk</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Panel admin -->
+      <section id="view-app" class="hidden">
+        <nav class="tabs" id="tabs">
+          <button type="button" class="tab-btn active" data-tab="dasbor">📊 Dasbor</button>
+          <button type="button" class="tab-btn" data-tab="kelas">🏫 Kelas</button>
+          <button type="button" class="tab-btn" data-tab="cabang">🌿 Cabang Produk</button>
+          <button type="button" class="tab-btn" data-tab="kelompok">👥 Kelompok</button>
+          <button type="button" class="tab-btn" data-tab="juri">🧑‍⚖️ Juri</button>
+          <button type="button" class="tab-btn" data-tab="kriteria">🎯 Kriteria</button>
+          <button type="button" class="tab-btn" data-tab="hasil">🏆 Hasil</button>
+        </nav>
+
+        <!-- DASBOR -->
+        <div class="tab-panel active" id="tab-dasbor">
+          <div class="stat-grid" id="stat-grid"></div>
+          <div class="card" style="margin-top:16px">
+            <h3>Rekap per Kelas</h3>
+            <div class="table-wrap"><table class="data" id="tbl-dasbor">
+              <thead><tr><th>Kelas</th><th class="num">Kelompok</th><th class="num">Siswa</th><th class="num">Nilai masuk</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- KELAS -->
+        <div class="tab-panel" id="tab-kelas">
+          <div class="card">
+            <h3 id="kelas-form-title">Tambah Kelas</h3>
+            <form id="form-kelas">
+              <input type="hidden" id="kelas-id">
+              <div class="form-row">
+                <div class="form-group"><label for="kelas-nama">Nama kelas</label><input type="text" id="kelas-nama" placeholder="cth: 7A" required></div>
+                <div class="form-group"><label for="kelas-tingkat">Tingkat</label>
+                  <select id="kelas-tingkat"><option value="7">7</option><option value="8">8</option><option value="9">9</option></select>
+                </div>
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary" id="kelas-submit">Tambah</button>
+                <button type="button" class="btn btn-ghost hidden" id="kelas-batal">Batal</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Daftar Kelas</h3>
+            <div class="table-wrap"><table class="data" id="tbl-kelas">
+              <thead><tr><th>Kelas</th><th>Tingkat</th><th class="num">Kelompok</th><th class="num">Siswa</th><th>Aksi</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- CABANG PRODUK -->
+        <div class="tab-panel" id="tab-cabang">
+          <div class="card">
+            <h3 id="cabang-form-title">Tambah Cabang Produk</h3>
+            <form id="form-cabang">
+              <input type="hidden" id="cabang-id">
+              <div class="form-row">
+                <div class="form-group"><label for="cabang-nama">Nama cabang</label><input type="text" id="cabang-nama" placeholder="cth: Olahan Minuman" required></div>
+                <div class="form-group"><label for="cabang-deskripsi">Deskripsi <span class="hint">(opsional)</span></label><input type="text" id="cabang-deskripsi" placeholder="cth: Minuman berbahan dasar nanas"></div>
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary" id="cabang-submit">Tambah</button>
+                <button type="button" class="btn btn-ghost hidden" id="cabang-batal">Batal</button>
+              </div>
+            </form>
+            <p class="muted small">Kode cabang dibuat otomatis dari nama. Cabang yang masih dipakai oleh kelompok tidak dapat dihapus.</p>
+          </div>
+          <div class="card">
+            <h3>Daftar Cabang Produk</h3>
+            <div class="table-wrap"><table class="data" id="tbl-cabang">
+              <thead><tr><th>Nama</th><th>Kode</th><th>Deskripsi</th><th>Aksi</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- KELOMPOK -->
+        <div class="tab-panel" id="tab-kelompok">
+          <div class="card">
+            <div class="form-row">
+              <div class="form-group"><label for="flt-kelas">Filter kelas</label><select id="flt-kelas"><option value="">Semua kelas</option></select></div>
+              <div class="form-group"><label for="flt-q">Cari kelompok / produk</label><input type="text" id="flt-q" placeholder="cth: Dodol"></div>
+              <div class="form-group"><label>&nbsp;</label><button type="button" class="btn btn-primary" id="btn-cari">🔍 Cari</button></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 id="kelompok-form-title">Tambah Kelompok</h3>
+            <form id="form-kelompok">
+              <input type="hidden" id="kelompok-id">
+              <div class="form-row">
+                <div class="form-group"><label for="kelompok-kelas">Kelas</label><select id="kelompok-kelas" required></select></div>
+                <div class="form-group"><label for="kelompok-nama">Nama kelompok</label><input type="text" id="kelompok-nama" placeholder="cth: Kelompok 1" required></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label for="kelompok-cabang">Cabang produk</label><select id="kelompok-cabang" required></select></div>
+                <div class="form-group"><label for="kelompok-produk">Nama produk</label><input type="text" id="kelompok-produk" placeholder="cth: Dodol Nanas"></div>
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary" id="kelompok-submit">Tambah</button>
+                <button type="button" class="btn btn-ghost hidden" id="kelompok-batal">Batal</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card hidden" id="siswa-panel">
+            <h3>Kelola Siswa — <span id="siswa-kelompok-nama"></span></h3>
+            <p class="muted small">Tambah / hapus baris nama. Idealnya 4–10 murid (maks. 12).</p>
+            <div id="siswa-rows"></div>
+            <div class="actions">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-siswa-tambah">＋ Tambah baris</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-siswa-simpan">💾 Simpan daftar siswa</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-siswa-tutup">Tutup</button>
+            </div>
+          </div>
+
+          <details class="box" id="import-box">
+            <summary>📥 Impor CSV massal</summary>
+            <p class="small muted">Format: <code>nama_kelompok,kelas,tingkat,cabang,nama_produk,murid</code> — nama murid dipisah titik-koma. Kolom <code>cabang</code> berisi <b>nama</b> cabang (mis. "Olahan Minuman"); bila belum ada, cabang otomatis dibuat. Baris pertama boleh header.</p>
+            <pre class="contoh">nama_kelompok,kelas,tingkat,cabang,nama_produk,murid
+Kelompok 1,7A,7,Olahan Nanas,Dodol Nanas,Andi;Budi;Citra;Dewi;Eka
+Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
+            <div class="form-group"><label for="csv-text">Tempel CSV di sini</label><textarea id="csv-text" rows="6"></textarea></div>
+            <button type="button" class="btn btn-primary" id="btn-import">⬆️ Impor</button>
+            <div id="import-hasil" class="small" style="margin-top:10px"></div>
+          </details>
+
+          <div class="card">
+            <h3>Daftar Kelompok <span class="muted small" id="kelompok-count"></span></h3>
+            <div class="table-wrap"><table class="data" id="tbl-kelompok">
+              <thead><tr><th>Kelompok</th><th>Kelas</th><th>Cabang</th><th>Produk</th><th class="num">Siswa</th><th class="num">Juri</th><th class="num">Foto</th><th>Aksi</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- JURI -->
+        <div class="tab-panel" id="tab-juri">
+          <div class="card">
+            <h3 id="juri-form-title">Tambah Juri</h3>
+            <form id="form-juri">
+              <input type="hidden" id="juri-id">
+              <div class="form-row">
+                <div class="form-group"><label for="juri-kode">Kode juri</label><input type="text" id="juri-kode" placeholder="cth: JURI1" required></div>
+                <div class="form-group"><label for="juri-nama">Nama juri</label><input type="text" id="juri-nama" placeholder="Nama lengkap" required></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label for="juri-pin">PIN <span class="hint">(4–8 digit angka; kosongkan = tidak diubah saat edit)</span></label><input type="password" id="juri-pin" inputmode="numeric" placeholder="cth: 1234"></div>
+                <div class="form-group"><label for="juri-ket">Keterangan</label><input type="text" id="juri-ket" placeholder="cth: Guru Prakarya"></div>
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary" id="juri-submit">Tambah</button>
+                <button type="button" class="btn btn-ghost hidden" id="juri-batal">Batal</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Daftar Juri</h3>
+            <div class="table-wrap"><table class="data" id="tbl-juri">
+              <thead><tr><th>Kode</th><th>Nama</th><th>Keterangan</th><th class="num">Kelompok dinilai</th><th>Aksi</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- KRITERIA -->
+        <div class="tab-panel" id="tab-kriteria">
+          <p class="muted small">Ubah nama, deskripsi, dan rentang skor tiap kriteria. Perubahan berlaku untuk penilaian berikutnya.</p>
+          <div id="kriteria-list"></div>
+        </div>
+
+        <!-- HASIL -->
+        <div class="tab-panel" id="tab-hasil">
+          <div class="card">
+            <div class="form-row">
+              <div class="form-group"><label for="hasil-kelas">Pilih kelas</label><select id="hasil-kelas"><option value="">— pilih —</option></select></div>
+              <div class="form-group"><label>&nbsp;</label>
+                <div class="actions" style="margin-top:0">
+                  <button type="button" class="btn btn-primary" id="btn-hasil">📊 Tampilkan</button>
+                  <button type="button" class="btn btn-ghost" id="btn-csv">⬇️ Unduh CSV</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="hasil-area"></div>
+
+          <div class="card" id="ba-card">
+            <h3>📜 Berita Acara per Kelas</h3>
+            <form id="form-ba">
+              <div class="form-row">
+                <div class="form-group"><label for="ba-nomor">Nomor</label><input type="text" id="ba-nomor" placeholder="cth: 01/BA-Projek/X/2026"></div>
+                <div class="form-group"><label for="ba-tempat">Tempat</label><input type="text" id="ba-tempat" placeholder="cth: SMPN 1 Punggur"></div>
+                <div class="form-group"><label for="ba-tanggal">Tanggal</label><input type="text" id="ba-tanggal" placeholder="cth: 13 Oktober 2026"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label for="ba-tahu-nama">Mengetahui — Nama</label><input type="text" id="ba-tahu-nama"></div>
+                <div class="form-group"><label for="ba-tahu-nip">Mengetahui — NIP</label><input type="text" id="ba-tahu-nip"></div>
+                <div class="form-group"><label for="ba-tahu-jabatan">Mengetahui — Jabatan</label><input type="text" id="ba-tahu-jabatan" placeholder="cth: Kepala Sekolah"></div>
+              </div>
+              <div class="form-group"><label for="ba-dibuat">Dibuat oleh (nama)</label><input type="text" id="ba-dibuat" placeholder="cth: Gunanto"></div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary">💾 Simpan Berita Acara</button>
+                <button type="button" class="btn btn-gold" id="btn-cetak">🖨️ Cetak Berita Acara</button>
+              </div>
+            </form>
+            <p class="muted small">Berita acara memakai kelas yang dipilih di atas. Pastikan hasil sudah ditampilkan dulu.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Area cetak: hanya tampil saat print -->
+  <div id="print-area"><div class="ba-doc" id="ba-doc"></div></div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>
