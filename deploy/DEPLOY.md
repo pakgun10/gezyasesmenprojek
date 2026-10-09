@@ -38,7 +38,7 @@ password acak tampil sekali di `sudo journalctl -u nilaiproyek`.
 ## 4. Nginx
 
 Tempel isi `deploy/nginx.conf` ke blok `server` domain yang dipakai
-(mis. `nilai.gezytech.web.id`), lalu:
+(mis. `aspro.gezytech.web.id`), lalu:
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
@@ -72,7 +72,7 @@ Migrasi database otomatis & idempoten — aman dijalankan ulang.
 
 ## 7. Alur pakai (setelah live)
 
-1. Buka `https://nilai.gezytech.web.id/admin.html`, login sebagai admin.
+1. Buka `https://aspro.gezytech.web.id/admin.html`, login sebagai admin.
 2. Tab **Cabang Produk**: tambah cabang bila perlu (default: Olahan Nanas,
    Makanan Ringan, Olahan Minuman).
 3. Tab **Kelas**: buat kelas (mis. 7A, 7B, ...; tingkat 7/8/9).
@@ -81,6 +81,6 @@ Migrasi database otomatis & idempoten — aman dijalankan ulang.
 5. Tab **Juri**: buat akun juri (kode + PIN 4–8 digit), bagikan ke masing-masing juri.
 6. Tab **Kriteria**: sesuaikan nama/deskripsi/rentang skor bila perlu
    (default 4 kriteria per kategori, rentang 0–100).
-7. Juri membuka `https://nilai.gezytech.web.id/juri.html` di HP/laptop,
+7. Juri membuka `https://aspro.gezytech.web.id/juri.html` di HP/laptop,
    login kode+PIN, menilai tiap kelompok, lalu langsung upload foto produk.
 8. Tab **Hasil**: pilih kelas → peringkat otomatis → unduh CSV / cetak berita acara.
