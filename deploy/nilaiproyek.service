@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 # Ganti USER_VPS dengan user Linux di VPS Pak Gun
 User=USER_VPS
-WorkingDirectory=/opt/nilaiproyek/gezymuse-nilai-projek
+WorkingDirectory=/opt/nilaiproyek/gezyasesmenprojek
 ExecStart=/home/USER_VPS/.bun/bin/bun run src/index.ts
 Restart=always
 RestartSec=5

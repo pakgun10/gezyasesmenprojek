@@ -8,9 +8,9 @@ Panduan untuk Pak Gun. Aplikasi: Bun + Hono + SQLite, port **3023**.
 sudo mkdir -p /opt/nilaiproyek/data /opt/nilaiproyek/backup
 sudo chown -R $USER:$USER /opt/nilaiproyek
 cd /opt/nilaiproyek
-git clone git@github-gezymuse-nilai-projek:pakgun10/gezymuse-nilai-projek.git
-# (atau: git clone https://github.com/pakgun10/gezymuse-nilai-projek.git)
-cd gezymuse-nilai-projek
+git clone git@github-gezymuse-nilai-projek:pakgun10/gezyasesmenprojek.git
+# (atau: git clone https://github.com/pakgun10/gezyasesmenprojek.git)
+cd gezyasesmenprojek
 bun install
 ```
 
@@ -52,7 +52,7 @@ Pastikan domain sudah HTTPS (certbot) agar cookie sesi aman.
 chmod +x deploy/backup.sh
 crontab -e
 # tambah baris:
-0 2 * * * /opt/nilaiproyek/gezymuse-nilai-projek/deploy/backup.sh >> /opt/nilaiproyek/backup/backup.log 2>&1
+0 2 * * * /opt/nilaiproyek/gezyasesmenprojek/deploy/backup.sh >> /opt/nilaiproyek/backup/backup.log 2>&1
 ```
 
 Catatan: foto produk tersimpan di `/opt/nilaiproyek/data/uploads/`.
@@ -62,7 +62,7 @@ secara berkala (mis. `rsync`) bila foto dianggap penting.
 ## 6. Update (rutin)
 
 ```bash
-cd /opt/nilaiproyek/gezymuse-nilai-projek
+cd /opt/nilaiproyek/gezyasesmenprojek
 git pull
 bun install
 sudo systemctl restart nilaiproyek

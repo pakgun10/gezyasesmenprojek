@@ -14,7 +14,7 @@ find "$BACKUP_DIR" -name 'nilai-projek-*.db' -mtime +$RETENSI -delete
 echo "Backup OK: $BACKUP_DIR/nilai-projek-$STAMP.db"
 
 # Contoh cron harian (jalankan sebagai user aplikasi):
-# 0 2 * * * /opt/nilaiproyek/gezymuse-nilai-projek/deploy/backup.sh >> /opt/nilaiproyek/backup/backup.log 2>&1
+# 0 2 * * * /opt/nilaiproyek/gezyasesmenprojek/deploy/backup.sh >> /opt/nilaiproyek/backup/backup.log 2>&1
 #
 # CATATAN: foto produk di $DATA_DIR/uploads TIDAK ikut ter-backup di sini.
 # Tambahkan rsync berkala bila perlu, mis.:
