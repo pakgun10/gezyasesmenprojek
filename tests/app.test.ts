@@ -361,3 +361,18 @@ describe("hasil, peringkat & berita acara", () => {
     expect(res.status).toBe(401);
   });
 });
+
+// ---------------------------------------------------------------------------
+describe("regresi: dashboard & kelas", () => {
+  test("tidak 500 (dulu: COUNT(DIST ...) bukan DISTINCT)", async () => {
+    const cookie = await loginAdmin();
+    let res = await app.request("/api/dashboard", { headers: { cookie } });
+    expect(res.status).toBe(200);
+    const d = await res.json();
+    expect(d.total_kelas).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(d.per_kelas)).toBe(true);
+    res = await app.request("/api/kelas", { headers: { cookie } });
+    expect(res.status).toBe(200);
+    expect(Array.isArray((await res.json()).kelas)).toBe(true);
+  });
+});

@@ -21,8 +21,8 @@ sec("get", "/dashboard", (c) => {
     .query(
       `SELECT k.id, k.nama, k.tingkat,
               COUNT(DISTINCT kel.id) AS kelompok,
-              COUNT(DIST s.id) AS siswa,
-              COUNT(DIST p.id) AS nilai_masuk
+              COUNT(DISTINCT s.id) AS siswa,
+              COUNT(DISTINCT p.id) AS nilai_masuk
        FROM kelas k
        LEFT JOIN kelompok kel ON kel.kelas_id = k.id
        LEFT JOIN siswa s ON s.kelompok_id = kel.id
