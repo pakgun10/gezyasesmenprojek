@@ -118,6 +118,7 @@
     else if (name === "kelompok") loadKelompokTab();
     else if (name === "juri") loadJuriTab();
     else if (name === "kriteria") loadKriteriaTab();
+    else if (name === "senam") loadSenamTab();
     // tab hasil dimuat manual via tombol
   }
 
@@ -228,6 +229,11 @@
     var cur = $("hasil-kelas").value;
     $("hasil-kelas").innerHTML = '<option value="">— pilih —</option>' + opts;
     if (cur) $("hasil-kelas").value = cur;
+    // dropdown modul senam
+    $("senam-kelompok-kelas").innerHTML = opts || '<option value="">(belum ada kelas)</option>';
+    var curS = $("senam-hasil-kelas").value;
+    $("senam-hasil-kelas").innerHTML = '<option value="">— pilih —</option>' + opts;
+    if (curS) $("senam-hasil-kelas").value = curS;
   }
 
   // ---------- CABANG PRODUK ----------
@@ -787,6 +793,390 @@
       h += "<tr><td>" + (i + 1) + "</td><td>" + esc(r.nama_kelompok) + "</td>" +
         "<td>" + esc(r.cabang_nama || "-") + "</td>" +
         "<td>" + esc(r.nama_produk || "-") + "</td>" +
+        kats.map(function (k) {
+          var v = r.nilai[k.kode];
+          return "<td>" + (v == null ? "—" : esc(v)) + "</td>";
+        }).join("") +
+        "<td><b>" + (r.total == null ? "—" : esc(r.total)) + "</b></td></tr>";
+    });
+    h += "</tbody></table>";
+
+    h += "<p>Demikian berita acara ini dibuat dengan sebenarnya untuk dipergunakan sebagaimana mestinya.</p>";
+    h += '<div class="ba-sign"><div>Mengetahui,<br>' + esc(tahuJabatan || "—") +
+      '<div class="ttd-space"></div><b><u>' + esc(tahuNama || "—") + "</u></b><br>NIP. " + esc(tahuNip || "—") + "</div>" +
+      "<div>" + esc(tempat || "—") + ", " + esc(tanggal || "—") + "<br>Dibuat oleh," +
+      '<div class="ttd-space"></div><b><u>' + esc(dibuat || "—") + "</u></b></div></div>";
+
+    $("ba-doc").innerHTML = h;
+  }
+
+  // =======================================================================
+  // ---------- SENAM (modul sejajar — semua endpoint /api/senam/*) ----------
+  // =======================================================================
+  var senamState = { hasilData: null, hasilKelasId: null, hasilKelasNama: "", anggotaKelompokId: null };
+
+  async function loadSenamTab() {
+    resetSenamKelompokForm();
+    $("senam-anggota-panel").classList.add("hidden");
+    try {
+      if (!window.__kelasCache) {
+        var d = await apiJson("/api/kelas");
+        window.__kelasCache = d.kelas || [];
+      }
+      fillKelasSelects();
+    } catch (e) { handleErr(e); return; }
+    loadSenamKelompokTable();
+    loadSenamKriteria();
+  }
+
+  // ----- kelompok senam -----
+  function resetSenamKelompokForm() {
+    $("senam-kelompok-id").value = "";
+    $("senam-kelompok-nama").value = "";
+    $("senam-kelompok-judul").value = "";
+    $("senam-kelompok-form-title").textContent = "Tambah Kelompok Senam";
+    $("senam-kelompok-submit").textContent = "Tambah";
+    $("senam-kelompok-batal").classList.add("hidden");
+  }
+
+  async function loadSenamKelompokTable() {
+    var tb = $("tbl-senam-kelompok").querySelector("tbody");
+    tb.innerHTML = loadingRow(7, "Memuat kelompok senam…");
+    try {
+      var d = await apiJson("/api/senam/kelompok");
+      var list = d.kelompok || [];
+      $("senam-kelompok-count").textContent = "(" + list.length + " kelompok)";
+      tb.innerHTML = list.map(function (g) {
+        return "<tr><td><b>" + esc(g.nama_kelompok) + "</b></td>" +
+          "<td>" + esc(g.kelas_nama) + "</td>" +
+          "<td>" + esc(g.judul_penampilan || "-") + "</td>" +
+          '<td class="num">' + esc(g.jml_anggota) + '</td><td class="num">' + esc(g.jml_juri) + '</td><td class="num">' + esc(g.jml_foto) + "</td>" +
+          '<td style="white-space:nowrap">' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-sgedit="' + g.id + '" title="Ubah">✏️</button> ' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-sgota="' + g.id + '" title="Kelola anggota">👥</button> ' +
+          '<button type="button" class="btn btn-danger btn-sm" data-sgdel="' + g.id + '" title="Hapus">🗑️</button></td></tr>';
+      }).join("") || '<tr><td colspan="7" class="muted">Belum ada kelompok senam. Tambahkan lewat form di atas.</td></tr>';
+      tb.querySelectorAll("[data-sgedit]").forEach(function (b) {
+        b.addEventListener("click", function () { editSenamKelompok(Number(b.getAttribute("data-sgedit"))); });
+      });
+      tb.querySelectorAll("[data-sgota]").forEach(function (b) {
+        b.addEventListener("click", function () { bukaSenamAnggotaPanel(Number(b.getAttribute("data-sgota"))); });
+      });
+      tb.querySelectorAll("[data-sgdel]").forEach(function (b) {
+        b.addEventListener("click", function () { hapusSenamKelompok(Number(b.getAttribute("data-sgdel"))); });
+      });
+    } catch (e) { handleErr(e); }
+  }
+
+  async function editSenamKelompok(id) {
+    try {
+      var d = await apiJson("/api/senam/kelompok/" + id);
+      var g = d.kelompok;
+      $("senam-kelompok-id").value = g.id;
+      $("senam-kelompok-kelas").value = g.kelas_id;
+      $("senam-kelompok-nama").value = g.nama_kelompok;
+      $("senam-kelompok-judul").value = g.judul_penampilan || "";
+      $("senam-kelompok-form-title").textContent = "Ubah Kelompok Senam";
+      $("senam-kelompok-submit").textContent = "💾 Simpan";
+      $("senam-kelompok-batal").classList.remove("hidden");
+      window.scrollTo(0, 0);
+    } catch (e) { handleErr(e); }
+  }
+
+  async function hapusSenamKelompok(id) {
+    if (!confirm("Hapus kelompok senam ini? Anggota, nilai, dan fotonya ikut terhapus!")) return;
+    try {
+      await apiJson("/api/senam/kelompok/" + id, "DELETE");
+      loadSenamKelompokTable();
+    } catch (e) { handleErr(e); }
+  }
+
+  $("form-senam-kelompok").addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    var id = $("senam-kelompok-id").value;
+    var body = {
+      kelas_id: Number($("senam-kelompok-kelas").value),
+      nama_kelompok: $("senam-kelompok-nama").value.trim(),
+      judul_penampilan: $("senam-kelompok-judul").value.trim()
+    };
+    if (!body.kelas_id) { showAlert("Pilih kelas dulu (tambahkan kelas di tab Kelas bila belum ada)."); return; }
+    try {
+      if (id) await apiJson("/api/senam/kelompok/" + id, "PUT", body);
+      else await apiJson("/api/senam/kelompok", "POST", body);
+      showAlert(id ? "Kelompok senam diperbarui." : "Kelompok senam ditambahkan.", "success");
+      resetSenamKelompokForm();
+      loadSenamKelompokTable();
+    } catch (e) { handleErr(e); }
+  });
+  $("senam-kelompok-batal").addEventListener("click", resetSenamKelompokForm);
+
+  // ----- kelola anggota senam -----
+  async function bukaSenamAnggotaPanel(id) {
+    try {
+      var d = await apiJson("/api/senam/kelompok/" + id);
+      senamState.anggotaKelompokId = id;
+      $("senam-anggota-kelompok-nama").textContent = d.kelompok.nama_kelompok + " (Kelas " + d.kelompok.kelas_nama + ")";
+      var names = (d.anggota || []).map(function (s) { return s.nama; });
+      renderSenamAnggotaRows(names.length ? names : [""]);
+      $("senam-anggota-panel").classList.remove("hidden");
+      $("senam-anggota-panel").scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (e) { handleErr(e); }
+  }
+
+  function renderSenamAnggotaRows(names) {
+    var box = $("senam-anggota-rows");
+    box.innerHTML = "";
+    names.forEach(function (n) { tambahBarisSenamAnggota(n); });
+  }
+
+  function tambahBarisSenamAnggota(nama) {
+    var box = $("senam-anggota-rows");
+    if (box.querySelectorAll(".siswa-row").length >= 12) { showAlert("Maksimal 12 murid per kelompok."); return; }
+    var div = document.createElement("div");
+    div.className = "siswa-row";
+    var inp = document.createElement("input");
+    inp.type = "text";
+    inp.placeholder = "Nama murid";
+    inp.value = nama || "";
+    inp.maxLength = 100;
+    var del = document.createElement("button");
+    del.type = "button";
+    del.className = "btn btn-danger btn-sm";
+    del.textContent = "×";
+    del.title = "Hapus baris";
+    del.addEventListener("click", function () { div.remove(); renumberSenamAnggota(); });
+    var num = document.createElement("span");
+    num.className = "muted small siswa-num";
+    num.style.minWidth = "28px";
+    div.appendChild(num);
+    div.appendChild(inp);
+    div.appendChild(del);
+    box.appendChild(div);
+    renumberSenamAnggota();
+  }
+
+  function renumberSenamAnggota() {
+    $("senam-anggota-rows").querySelectorAll(".siswa-row").forEach(function (row, i) {
+      row.querySelector(".siswa-num").textContent = (i + 1) + ".";
+    });
+  }
+
+  $("btn-senam-anggota-tambah").addEventListener("click", function () { tambahBarisSenamAnggota(""); });
+  $("btn-senam-anggota-tutup").addEventListener("click", function () {
+    $("senam-anggota-panel").classList.add("hidden");
+    senamState.anggotaKelompokId = null;
+  });
+  $("btn-senam-anggota-simpan").addEventListener("click", async function () {
+    var names = [];
+    $("senam-anggota-rows").querySelectorAll("input").forEach(function (inp) {
+      var v = inp.value.trim();
+      if (v) names.push(v);
+    });
+    if (names.length < 4) { showAlert("Minimal 4 murid per kelompok senam (terisi: " + names.length + ")."); return; }
+    if (names.length > 12) { showAlert("Maksimal 12 murid per kelompok senam."); return; }
+    try {
+      var r = await apiJson("/api/senam/kelompok/" + senamState.anggotaKelompokId + "/anggota", "PUT", { names: names });
+      showAlert("Daftar anggota disimpan (" + r.jumlah + " murid).", "success");
+      loadSenamKelompokTable();
+    } catch (e) { handleErr(e); }
+  });
+
+  // ----- kriteria senam -----
+  async function loadSenamKriteria() {
+    var box = $("senam-kriteria-list");
+    box.innerHTML = '<div class="loading"><span class="spinner"></span><br>Memuat kriteria senam…</div>';
+    try {
+      var d = await apiJson("/api/senam/kategori");
+      box.innerHTML = (d.kategori || []).map(function (kat) {
+        var kris = (kat.kriteria || []).map(function (kr) {
+          return '<div class="card" id="skri-' + kr.id + '">' +
+            '<div class="form-group"><label>Nama kriteria</label><input type="text" data-f="nama" value="' + esc(kr.nama) + '"></div>' +
+            '<div class="form-group"><label>Deskripsi</label><input type="text" data-f="deskripsi" value="' + esc(kr.deskripsi) + '"></div>' +
+            '<div class="form-row">' +
+            '<div class="form-group"><label>Min</label><input type="number" data-f="skor_min" min="0" max="100" value="' + esc(kr.skor_min) + '"></div>' +
+            '<div class="form-group"><label>Max</label><input type="number" data-f="skor_max" min="0" max="100" value="' + esc(kr.skor_max) + '"></div>' +
+            '<div class="form-group"><label>Default</label><input type="number" data-f="skor_default" min="0" max="100" value="' + esc(kr.skor_default) + '"></div>' +
+            "</div>" +
+            '<button type="button" class="btn btn-primary btn-sm" data-skrisimpan="' + kr.id + '">💾 Simpan kriteria</button> ' +
+            '<span class="small muted" data-skrimsg="' + kr.id + '"></span>' +
+            "</div>";
+        }).join("");
+        return '<div class="card"><h3>🎯 ' + esc(kat.nama) + "</h3>" + kris + "</div>";
+      }).join("");
+      box.querySelectorAll("[data-skrisimpan]").forEach(function (b) {
+        b.addEventListener("click", function () { simpanSenamKriteria(Number(b.getAttribute("data-skrisimpan")), b); });
+      });
+    } catch (e) { handleErr(e); }
+  }
+
+  async function simpanSenamKriteria(id, btn) {
+    var card = $("skri-" + id);
+    var msg = card.querySelector('[data-skrimsg="' + id + '"]');
+    msg.textContent = "";
+    function val(f) { return card.querySelector('[data-f="' + f + '"]').value; }
+    var body = {
+      nama: val("nama").trim(),
+      deskripsi: val("deskripsi").trim(),
+      skor_min: Number(val("skor_min")),
+      skor_max: Number(val("skor_max")),
+      skor_default: Number(val("skor_default"))
+    };
+    if (body.skor_min > body.skor_max) { msg.textContent = "⚠️ Min tidak boleh lebih dari Max."; return; }
+    if (body.skor_default < body.skor_min || body.skor_default > body.skor_max) { msg.textContent = "⚠️ Default harus di dalam rentang Min–Max."; return; }
+    btn.disabled = true; btn.textContent = "Menyimpan…";
+    try {
+      await apiJson("/api/senam/kriteria/" + id, "PUT", body);
+      msg.textContent = "✅ Tersimpan.";
+    } catch (e) { msg.textContent = "❌ " + e.message; }
+    finally { btn.disabled = false; btn.textContent = "💾 Simpan kriteria"; }
+  }
+
+  // ----- hasil senam -----
+  $("btn-senam-hasil").addEventListener("click", async function () {
+    var id = $("senam-hasil-kelas").value;
+    if (!id) { showAlert("Pilih kelas dulu."); return; }
+    var area = $("senam-hasil-area");
+    area.innerHTML = '<div class="card"><div class="loading"><span class="spinner"></span><br>Menghitung hasil…</div></div>';
+    try {
+      var d = await apiJson("/api/senam/hasil?kelas_id=" + id);
+      senamState.hasilData = d;
+      senamState.hasilKelasId = id;
+      var sel = $("senam-hasil-kelas");
+      senamState.hasilKelasNama = sel.options[sel.selectedIndex].text;
+      renderSenamHasil(d);
+      loadSenamBeritaAcara(id);
+    } catch (e) { handleErr(e); }
+  });
+
+  $("senam-hasil-kelas").addEventListener("change", function () {
+    senamState.hasilData = null;
+    $("senam-hasil-area").innerHTML = "";
+  });
+
+  function renderSenamHasil(d) {
+    var kats = d.kategori || [];
+    var lengkap = d.hasil.filter(function (h) { return h.lengkap; });
+    var belum = d.hasil.filter(function (h) { return !h.lengkap; });
+    var head = "<tr><th>Peringkat</th><th>Kelompok</th><th>Judul Penampilan</th>" +
+      kats.map(function (k) { return '<th class="num">' + esc(k.nama) + "</th>"; }).join("") +
+      '<th class="num">Total (maks 400)</th><th class="num">Juri</th></tr>';
+    function row(h) {
+      return "<tr" + (h.lengkap ? "" : ' class="total-belum"') + "><td>" +
+        (h.peringkat != null ? "🏆 <b>" + esc(h.peringkat) + "</b>" : "—") + "</td>" +
+        "<td><b>" + esc(h.nama_kelompok) + "</b></td>" +
+        "<td>" + esc(h.judul_penampilan || "-") + "</td>" +
+        kats.map(function (k) {
+          var v = h.nilai[k.kode];
+          return '<td class="num">' + (v == null ? "—" : esc(v)) + "</td>";
+        }).join("") +
+        '<td class="num"><b>' + (h.total == null ? "—" : esc(h.total)) + "</b></td>" +
+        '<td class="num">' + esc(h.jml_juri) + "</td></tr>";
+    }
+    var html = '<div class="card"><h3>🏆 Peringkat Senam — Kelas ' + esc(d.kelas.nama) + "</h3>" +
+      '<div class="table-wrap"><table class="data"><thead>' + head + "</thead><tbody>" +
+      lengkap.map(row).join("") +
+      (belum.length ? '<tr><td colspan="' + (5 + kats.length) + '" style="background:var(--gold-soft);font-weight:700">Kelompok yang nilainya belum lengkap:</td></tr>' + belum.map(row).join("") : "") +
+      "</tbody></table></div></div>";
+    $("senam-hasil-area").innerHTML = html;
+  }
+
+  $("btn-senam-csv").addEventListener("click", async function () {
+    var id = $("senam-hasil-kelas").value;
+    if (!id) { showAlert("Pilih kelas dulu."); return; }
+    try {
+      var r = await fetch("/api/senam/hasil/export.csv?kelas_id=" + id, { credentials: "same-origin" });
+      if (r.status === 401) { toLogin(); showAlert("Sesi berakhir. Silakan login lagi."); return; }
+      if (!r.ok) {
+        var dj = {};
+        try { dj = await r.json(); } catch (e) {}
+        throw apiErr(r.status, dj.error || "Gagal mengunduh CSV");
+      }
+      var blob = await r.blob();
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "hasil-senam-" + senamState.hasilKelasNama.replace(/\s+/g, "") + ".csv";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    } catch (e) { handleErr(e); }
+  });
+
+  // ----- berita acara senam -----
+  async function loadSenamBeritaAcara(kelasId) {
+    try {
+      var d = await apiJson("/api/senam/berita-acara?kelas_id=" + kelasId);
+      var ba = d.berita_acara || {};
+      $("senam-ba-nomor").value = ba.nomor || "";
+      $("senam-ba-tempat").value = ba.tempat || "";
+      $("senam-ba-tanggal").value = ba.tanggal || "";
+      $("senam-ba-tahu-nama").value = ba.mengetahui_nama || "";
+      $("senam-ba-tahu-nip").value = ba.mengetahui_nip || "";
+      $("senam-ba-tahu-jabatan").value = ba.mengetahui_jabatan || "";
+      $("senam-ba-dibuat").value = ba.dibuat_nama || "";
+    } catch (e) {
+      if (e.status === 401) { toLogin(); }
+    }
+  }
+
+  $("form-senam-ba").addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    if (!senamState.hasilKelasId) { showAlert("Pilih kelas dan tampilkan hasil senam dulu."); return; }
+    var body = {
+      kelas_id: Number(senamState.hasilKelasId),
+      nomor: $("senam-ba-nomor").value.trim(),
+      tempat: $("senam-ba-tempat").value.trim(),
+      tanggal: $("senam-ba-tanggal").value.trim(),
+      mengetahui_nama: $("senam-ba-tahu-nama").value.trim(),
+      mengetahui_nip: $("senam-ba-tahu-nip").value.trim(),
+      mengetahui_jabatan: $("senam-ba-tahu-jabatan").value.trim(),
+      dibuat_nama: $("senam-ba-dibuat").value.trim()
+    };
+    try {
+      await apiJson("/api/senam/berita-acara", "PUT", body);
+      showAlert("Berita acara senam disimpan.", "success");
+    } catch (e) { handleErr(e); }
+  });
+
+  $("btn-senam-cetak").addEventListener("click", function () {
+    if (!senamState.hasilData || !senamState.hasilKelasId) { showAlert("Pilih kelas dan tampilkan hasil senam dulu."); return; }
+    renderSenamBeritaAcara();
+    window.print();
+  });
+
+  function renderSenamBeritaAcara() {
+    var d = senamState.hasilData;
+    var kats = d.kategori || [];
+    var lengkap = d.hasil.filter(function (h) { return h.lengkap; });
+    var juara = lengkap.slice(0, 3);
+    var juaraLabel = ["Juara 1", "Juara 2", "Juara 3"];
+    var nomor = $("senam-ba-nomor").value.trim();
+    var tempat = $("senam-ba-tempat").value.trim();
+    var tanggal = $("senam-ba-tanggal").value.trim();
+    var tahuNama = $("senam-ba-tahu-nama").value.trim();
+    var tahuNip = $("senam-ba-tahu-nip").value.trim();
+    var tahuJabatan = $("senam-ba-tahu-jabatan").value.trim();
+    var dibuat = $("senam-ba-dibuat").value.trim();
+
+    var h = "<h2>BERITA ACARA HASIL ASESMEN SENAM BERKELOMPOK</h2>" +
+      '<div class="ba-nomor">Nomor: ' + esc(nomor || "—") + "</div>" +
+      "<p>Pada hari ini, <b>" + esc(tanggal || "—") + "</b>, bertempat di <b>" + esc(tempat || "—") +
+      "</b>, telah dilaksanakan asesmen performa senam berkelompok siswa <b>Kelas " + esc(d.kelas.nama) + "</b> " +
+      "oleh dewan juri. " +
+      "Penilaian meliputi 4 kategori: " + esc(kats.map(function (k) { return k.nama; }).join(", ")) +
+      ", masing-masing dengan skala 0–100. Berdasarkan rekapitulasi nilai, ditetapkan peringkat sebagai berikut:</p>";
+
+    h += "<h3>A. Juara</h3><table><thead><tr><th>Juara</th><th>Kelompok</th><th>Judul Penampilan</th><th>Total Nilai</th></tr></thead><tbody>";
+    juara.forEach(function (j, i) {
+      h += "<tr><td>" + juaraLabel[i] + "</td><td>" + esc(j.nama_kelompok) + "</td><td>" + esc(j.judul_penampilan || "-") + "</td><td>" + esc(j.total) + "</td></tr>";
+    });
+    h += "</tbody></table>";
+
+    h += "<h3>B. Daftar Lengkap Hasil Penilaian</h3><table><thead><tr><th>No</th><th>Kelompok</th><th>Judul Penampilan</th>" +
+      kats.map(function (k) { return "<th>" + esc(k.nama) + "</th>"; }).join("") +
+      "<th>Total</th></tr></thead><tbody>";
+    d.hasil.forEach(function (r, i) {
+      h += "<tr><td>" + (i + 1) + "</td><td>" + esc(r.nama_kelompok) + "</td>" +
+        "<td>" + esc(r.judul_penampilan || "-") + "</td>" +
         kats.map(function (k) {
           var v = r.nilai[k.kode];
           return "<td>" + (v == null ? "—" : esc(v)) + "</td>";

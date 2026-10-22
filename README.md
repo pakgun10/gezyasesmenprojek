@@ -19,6 +19,12 @@ untuk kelas 7, 8, 9. Berbasis web (HP & laptop), data tersimpan di database SQLi
 - **Hasil**: rekap per kelas + peringkat otomatis (rata-rata per kategori dari semua juri,
   total maks 400; seri = peringkat sama), ekspor CSV.
 - **Berita acara** per kelas: nomor/tanggal/penandatangan → cetak via browser.
+- **Modul Asesmen Senam** (sejajar, terpisah penuh dari penilaian projek): kelompok senam
+  + anggota 4–12 murid + judul penampilan; 4 kategori (kekompakan & sinkronisasi,
+  teknik gerakan, kreativitas & variasi formasi, penampilan & kerja sama tim) dengan
+  kriteria berjenjang pola yang sama; juri memakai akun yang sama (halaman `senam.html`),
+  foto penampilan opsional; hasil/peringkat/CSV/berita acara senam tersendiri.
+  Data hidup di tabel `senam_*` — tidak bercampur dengan data projek sama sekali.
 
 ## Struktur
 
@@ -31,8 +37,9 @@ src/
   judge.ts    # login juri (kode + PIN)
   admin.ts    # CRUD kelas/cabang/kelompok/siswa/juri/kriteria + impor CSV
   scoring.ts  # penilaian juri, upload foto, hasil/peringkat, CSV, berita acara
-public/       # frontend vanilla (index, juri, admin)
-tests/        # bun test (17 test)
+  senam.ts    # modul Asesmen Senam (route /api/senam/*, tabel senam_*)
+public/       # frontend vanilla (index, juri, senam, admin)
+tests/        # bun test
 deploy/       # DEPLOY.md, .env.example, systemd, nginx, backup.sh
 ```
 

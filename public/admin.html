@@ -48,6 +48,7 @@
           <button type="button" class="tab-btn" data-tab="juri">🧑‍⚖️ Juri</button>
           <button type="button" class="tab-btn" data-tab="kriteria">🎯 Kriteria</button>
           <button type="button" class="tab-btn" data-tab="hasil">🏆 Hasil</button>
+          <button type="button" class="tab-btn" data-tab="senam">🤸 Senam</button>
         </nav>
 
         <!-- DASBOR -->
@@ -245,6 +246,88 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
               </div>
             </form>
             <p class="muted small">Berita acara memakai kelas yang dipilih di atas. Pastikan hasil sudah ditampilkan dulu.</p>
+          </div>
+        </div>
+
+        <!-- SENAM -->
+        <div class="tab-panel" id="tab-senam">
+          <p class="muted small">Modul Asesmen Performa Senam Berkelompok — terpisah dari Penilaian Projek (data, kriteria, dan hasil sendiri). Kelas dan akun juri dipakai bersama.</p>
+
+          <div class="card">
+            <h3 id="senam-kelompok-form-title">Tambah Kelompok Senam</h3>
+            <form id="form-senam-kelompok">
+              <input type="hidden" id="senam-kelompok-id">
+              <div class="form-row">
+                <div class="form-group"><label for="senam-kelompok-kelas">Kelas</label><select id="senam-kelompok-kelas" required></select></div>
+                <div class="form-group"><label for="senam-kelompok-nama">Nama kelompok</label><input type="text" id="senam-kelompok-nama" placeholder="cth: Kelompok 1" required></div>
+              </div>
+              <div class="form-group"><label for="senam-kelompok-judul">Judul Penampilan / Musik Pengiring <span class="hint">(opsional)</span></label><input type="text" id="senam-kelompok-judul" placeholder="cth: Senam Anak Indonesia Hebat"></div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary" id="senam-kelompok-submit">Tambah</button>
+                <button type="button" class="btn btn-ghost hidden" id="senam-kelompok-batal">Batal</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card hidden" id="senam-anggota-panel">
+            <h3>Kelola Anggota — <span id="senam-anggota-kelompok-nama"></span></h3>
+            <p class="muted small">Tambah / hapus baris nama. Kelompok senam idealnya 4–12 murid (maks. 12).</p>
+            <div id="senam-anggota-rows"></div>
+            <div class="actions">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-senam-anggota-tambah">＋ Tambah baris</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-senam-anggota-simpan">💾 Simpan daftar anggota</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-senam-anggota-tutup">Tutup</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Daftar Kelompok Senam <span class="muted small" id="senam-kelompok-count"></span></h3>
+            <div class="table-wrap"><table class="data" id="tbl-senam-kelompok">
+              <thead><tr><th>Kelompok</th><th>Kelas</th><th>Judul Penampilan</th><th class="num">Anggota</th><th class="num">Juri</th><th class="num">Foto</th><th>Aksi</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+          </div>
+
+          <div class="card">
+            <h3>🎯 Kriteria Senam</h3>
+            <p class="muted small">Ubah nama, deskripsi, dan rentang skor tiap kriteria senam. Perubahan berlaku untuk penilaian berikutnya.</p>
+            <div id="senam-kriteria-list"></div>
+          </div>
+
+          <div class="card">
+            <h3>🏆 Hasil Senam</h3>
+            <div class="form-row">
+              <div class="form-group"><label for="senam-hasil-kelas">Pilih kelas</label><select id="senam-hasil-kelas"><option value="">— pilih —</option></select></div>
+              <div class="form-group"><label>&nbsp;</label>
+                <div class="actions" style="margin-top:0">
+                  <button type="button" class="btn btn-primary" id="btn-senam-hasil">📊 Tampilkan</button>
+                  <button type="button" class="btn btn-ghost" id="btn-senam-csv">⬇️ Unduh CSV</button>
+                </div>
+              </div>
+            </div>
+            <div id="senam-hasil-area"></div>
+          </div>
+
+          <div class="card" id="senam-ba-card">
+            <h3>📜 Berita Acara Senam per Kelas</h3>
+            <form id="form-senam-ba">
+              <div class="form-row">
+                <div class="form-group"><label for="senam-ba-nomor">Nomor</label><input type="text" id="senam-ba-nomor" placeholder="cth: 01/BA-Senam/X/2026"></div>
+                <div class="form-group"><label for="senam-ba-tempat">Tempat</label><input type="text" id="senam-ba-tempat" placeholder="cth: SMPN 1 Punggur"></div>
+                <div class="form-group"><label for="senam-ba-tanggal">Tanggal</label><input type="text" id="senam-ba-tanggal" placeholder="cth: 13 Oktober 2026"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label for="senam-ba-tahu-nama">Mengetahui — Nama</label><input type="text" id="senam-ba-tahu-nama"></div>
+                <div class="form-group"><label for="senam-ba-tahu-nip">Mengetahui — NIP</label><input type="text" id="senam-ba-tahu-nip"></div>
+                <div class="form-group"><label for="senam-ba-tahu-jabatan">Mengetahui — Jabatan</label><input type="text" id="senam-ba-tahu-jabatan" placeholder="cth: Kepala Sekolah"></div>
+              </div>
+              <div class="form-group"><label for="senam-ba-dibuat">Dibuat oleh (nama)</label><input type="text" id="senam-ba-dibuat" placeholder="cth: Gunanto"></div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary">💾 Simpan Berita Acara</button>
+                <button type="button" class="btn btn-gold" id="btn-senam-cetak">🖨️ Cetak Berita Acara</button>
+              </div>
+            </form>
+            <p class="muted small">Berita acara senam memakai kelas yang dipilih di bagian Hasil Senam di atas, dan tersimpan terpisah dari berita acara projek.</p>
           </div>
         </div>
       </section>

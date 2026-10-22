@@ -122,6 +122,73 @@ const MIGRATIONS: string[] = [
     WHERE cabang_id IS NULL AND jenis_produk = 'makanan_ringan'`,
   `UPDATE kelompok SET cabang_id = (SELECT id FROM cabang_produk WHERE kode = 'olahan_nanas')
     WHERE cabang_id IS NULL`,
+  // ------------------------------------------------------------------
+  // Modul Asesmen Senam: tabel sejajar senam_* (audit 2026-10-22).
+  // Sengaja TIDAK memakai tabel kategori/kelompok/penilaian/foto/
+  // berita_acara milik asesmen projek, agar kedua asesmen tidak bentrok.
+  // Yang dipakai bersama hanya kelas, juri, dan akun admin.
+  `CREATE TABLE IF NOT EXISTS senam_kategori (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kode TEXT UNIQUE NOT NULL,
+    nama TEXT NOT NULL,
+    urutan INTEGER NOT NULL DEFAULT 0)`,
+  `CREATE TABLE IF NOT EXISTS senam_kriteria (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kategori_id INTEGER NOT NULL REFERENCES senam_kategori(id) ON DELETE CASCADE,
+    nama TEXT NOT NULL,
+    deskripsi TEXT NOT NULL DEFAULT '',
+    skor_min INTEGER NOT NULL DEFAULT 0,
+    skor_max INTEGER NOT NULL DEFAULT 100,
+    skor_default INTEGER NOT NULL DEFAULT 0,
+    urutan INTEGER NOT NULL DEFAULT 0)`,
+  `CREATE INDEX IF NOT EXISTS idx_senam_kriteria_kategori ON senam_kriteria(kategori_id, urutan)`,
+  `CREATE TABLE IF NOT EXISTS senam_kelompok (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    nama_kelompok TEXT NOT NULL,
+    judul_penampilan TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(kelas_id, nama_kelompok))`,
+  `CREATE INDEX IF NOT EXISTS idx_senam_kelompok_kelas ON senam_kelompok(kelas_id)`,
+  `CREATE TABLE IF NOT EXISTS senam_anggota (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kelompok_id INTEGER NOT NULL REFERENCES senam_kelompok(id) ON DELETE CASCADE,
+    nama TEXT NOT NULL,
+    urutan INTEGER NOT NULL DEFAULT 0)`,
+  `CREATE INDEX IF NOT EXISTS idx_senam_anggota_kelompok ON senam_anggota(kelompok_id, urutan)`,
+  `CREATE TABLE IF NOT EXISTS senam_penilaian (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kelompok_id INTEGER NOT NULL REFERENCES senam_kelompok(id) ON DELETE CASCADE,
+    juri_id INTEGER NOT NULL REFERENCES juri(id) ON DELETE CASCADE,
+    kategori_id INTEGER NOT NULL REFERENCES senam_kategori(id) ON DELETE CASCADE,
+    kriteria_id INTEGER NOT NULL REFERENCES senam_kriteria(id),
+    skor REAL NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT,
+    UNIQUE(kelompok_id, juri_id, kategori_id))`,
+  `CREATE INDEX IF NOT EXISTS idx_senam_penilaian_kelompok ON senam_penilaian(kelompok_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_senam_penilaian_juri ON senam_penilaian(juri_id)`,
+  `CREATE TABLE IF NOT EXISTS senam_foto (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kelompok_id INTEGER NOT NULL REFERENCES senam_kelompok(id) ON DELETE CASCADE,
+    juri_id INTEGER NOT NULL REFERENCES juri(id) ON DELETE CASCADE,
+    filename TEXT NOT NULL,
+    mime TEXT NOT NULL DEFAULT '',
+    size INTEGER NOT NULL DEFAULT 0,
+    caption TEXT NOT NULL DEFAULT '',
+    uploaded_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE INDEX IF NOT EXISTS idx_senam_foto_kelompok ON senam_foto(kelompok_id)`,
+  `CREATE TABLE IF NOT EXISTS senam_berita_acara (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kelas_id INTEGER UNIQUE NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    nomor TEXT NOT NULL DEFAULT '',
+    tempat TEXT NOT NULL DEFAULT '',
+    tanggal TEXT NOT NULL DEFAULT '',
+    mengetahui_nama TEXT NOT NULL DEFAULT '',
+    mengetahui_nip TEXT NOT NULL DEFAULT '',
+    mengetahui_jabatan TEXT NOT NULL DEFAULT '',
+    dibuat_nama TEXT NOT NULL DEFAULT '',
+    updated_at TEXT)`,
 ];
 
 export function initDb(dataDir: string): Database {
@@ -222,6 +289,72 @@ export function seedKategori(): void {
     "INSERT INTO kriteria (kategori_id, nama, deskripsi, skor_min, skor_max, skor_default, urutan) VALUES (?, ?, ?, ?, ?, ?, ?)"
   );
   KATEGORI_SEED.forEach((k, ki) => {
+    const res = insKat.run(k.kode, k.nama, ki + 1);
+    const katId = Number(res.lastInsertRowid);
+    k.kriteria.forEach((kr, kri) => {
+      insKri.run(katId, kr.nama, kr.deskripsi, kr.min, kr.max, kr.def, kri + 1);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Seed kategori senam: 4 kategori x 4 kriteria (pola rentang sama dengan
+// asesmen projek: 90-100 / 78-89 / 65-77 / 0-64, default 95/84/71/50).
+// Hanya menyentuh tabel senam_* — seed projek di atas tidak berubah.
+// ---------------------------------------------------------------------------
+
+const SENAM_KATEGORI_SEED: { kode: string; nama: string; kriteria: KriteriaSeed[] }[] = [
+  {
+    kode: "kekompakan",
+    nama: "Kekompakan & Sinkronisasi Gerakan",
+    kriteria: [
+      { nama: "Sangat kompak", deskripsi: "Seluruh gerakan serentak dan seragam, tempo tepat mengikuti iringan, transisi antar gerakan dan formasi mulus", min: 90, max: 100, def: 95 },
+      { nama: "Kompak", deskripsi: "Gerakan umumnya serentak, hanya 1–2 momen kurang seragam", min: 78, max: 89, def: 84 },
+      { nama: "Cukup kompak", deskripsi: "Beberapa bagian tidak serentak, tempo kadang meleset dari iringan", min: 65, max: 77, def: 71 },
+      { nama: "Kurang kompak", deskripsi: "Gerakan sering tidak serentak, banyak anggota tidak mengikuti tempo", min: 0, max: 64, def: 50 },
+    ],
+  },
+  {
+    kode: "teknik",
+    nama: "Penguasaan Teknik Gerakan",
+    kriteria: [
+      { nama: "Sangat menguasai", deskripsi: "Teknik gerakan benar dan aman, sikap awal/akhir jelas, rangkaian tuntas tanpa kesalahan berarti", min: 90, max: 100, def: 95 },
+      { nama: "Menguasai", deskripsi: "Teknik umumnya benar, ada kesalahan kecil yang tidak mengganggu rangkaian", min: 78, max: 89, def: 84 },
+      { nama: "Cukup menguasai", deskripsi: "Beberapa gerakan kurang tepat atau tidak tuntas", min: 65, max: 77, def: 71 },
+      { nama: "Kurang menguasai", deskripsi: "Banyak gerakan salah atau tidak tuntas, ada gerakan yang kurang aman", min: 0, max: 64, def: 50 },
+    ],
+  },
+  {
+    kode: "kreativitas_senam",
+    nama: "Kreativitas & Variasi Gerakan/Formasi",
+    kriteria: [
+      { nama: "Sangat kreatif", deskripsi: "Variasi gerakan kaya, pola lantai/formasi berubah menarik, ada unsur orisinal dari kelompok", min: 90, max: 100, def: 95 },
+      { nama: "Kreatif", deskripsi: "Ada variasi gerakan dan perubahan formasi, cukup menarik", min: 78, max: 89, def: 84 },
+      { nama: "Cukup kreatif", deskripsi: "Variasi terbatas, formasi jarang berubah", min: 65, max: 77, def: 71 },
+      { nama: "Kurang kreatif", deskripsi: "Gerakan monoton, satu formasi dari awal sampai akhir", min: 0, max: 64, def: 50 },
+    ],
+  },
+  {
+    kode: "penampilan",
+    nama: "Penampilan & Kerja Sama Tim",
+    kriteria: [
+      { nama: "Sangat baik", deskripsi: "Ekspresi percaya diri dan bersemangat, semua anggota aktif berperan, kostum/atribut rapi dan seragam", min: 90, max: 100, def: 95 },
+      { nama: "Baik", deskripsi: "Percaya diri, sebagian besar anggota aktif, kostum cukup rapi", min: 78, max: 89, def: 84 },
+      { nama: "Cukup", deskripsi: "Ekspresi datar, ada anggota yang pasif, kostum kurang seragam", min: 65, max: 77, def: 71 },
+      { nama: "Kurang", deskripsi: "Tampil tidak bersemangat, banyak anggota pasif, kostum tidak rapi/tidak seragam", min: 0, max: 64, def: 50 },
+    ],
+  },
+];
+
+export function seedSenamKategori(): void {
+  const db = getDb();
+  const count = (db.query("SELECT COUNT(*) AS n FROM senam_kategori").get() as { n: number }).n;
+  if (count > 0) return;
+  const insKat = db.query("INSERT INTO senam_kategori (kode, nama, urutan) VALUES (?, ?, ?)");
+  const insKri = db.query(
+    "INSERT INTO senam_kriteria (kategori_id, nama, deskripsi, skor_min, skor_max, skor_default, urutan) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  );
+  SENAM_KATEGORI_SEED.forEach((k, ki) => {
     const res = insKat.run(k.kode, k.nama, ki + 1);
     const katId = Number(res.lastInsertRowid);
     k.kriteria.forEach((kr, kri) => {
