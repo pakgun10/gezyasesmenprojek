@@ -237,6 +237,29 @@ type KriteriaSeed = {
   def: number;
 };
 
+// Kriteria berikut dipakai bersama oleh seed (instalasi baru) dan migrasi
+// rubrik berbasis Dimensi Profil Lulusan (DB lama) — satu sumber kebenaran.
+const KRITERIA_PENALARAN_KRITIS: KriteriaSeed[] = [
+  { nama: "Sangat kritis", deskripsi: "Mampu menganalisis masalah secara mendalam, menghubungkan berbagai informasi (bahan, biaya, selera konsumen), mengambil keputusan produk yang logis, serta mengevaluasi hasil dan menjelaskan perbaikan", min: 90, max: 100, def: 95 },
+  { nama: "Kritis", deskripsi: "Mampu menganalisis masalah dan mengambil keputusan dengan alasan yang masuk akal; ada evaluasi sederhana terhadap hasil", min: 78, max: 89, def: 84 },
+  { nama: "Cukup kritis", deskripsi: "Analisis masalah masih dangkal; keputusan diambil dengan alasan terbatas; evaluasi sebatas kesan umum", min: 65, max: 77, def: 71 },
+  { nama: "Kurang kritis", deskripsi: "Tidak tampak analisis; keputusan tanpa alasan yang jelas; tidak mampu menjelaskan atau mengevaluasi hasil kerjanya", min: 0, max: 64, def: 50 },
+];
+
+const KRITERIA_KUALITAS_PRODUK: KriteriaSeed[] = [
+  { nama: "Sangat baik", deskripsi: "Rasa seimbang, tekstur pas, aroma menggugah; kemasan rapi, bersih, higienis, dan informatif (nama produk, komposisi, tanggal)", min: 90, max: 100, def: 95 },
+  { nama: "Baik", deskripsi: "Rasa baik dan kemasan rapi serta cukup informatif; ada kekurangan kecil pada satu aspek", min: 78, max: 89, def: 84 },
+  { nama: "Cukup", deskripsi: "Rasa standar atau kurang seimbang; kemasan kurang rapi atau kurang informatif", min: 65, max: 77, def: 71 },
+  { nama: "Kurang", deskripsi: "Rasa tidak enak atau produk gagal; kemasan tidak rapi, tidak higienis, tanpa informasi produk", min: 0, max: 64, def: 50 },
+];
+
+const KRITERIA_KOLABORASI_SENAM: KriteriaSeed[] = [
+  { nama: "Sangat kolaboratif", deskripsi: "Seluruh anggota bekerja sama secara gotong royong dengan pembagian peran yang jelas, saling mendukung dan menghargai kontribusi setiap anggota hingga penampilan selesai", min: 90, max: 100, def: 95 },
+  { nama: "Kolaboratif", deskripsi: "Anggota bekerja sama dengan baik; pembagian peran ada meski belum merata; tetap saling mendukung", min: 78, max: 89, def: 84 },
+  { nama: "Cukup kolaboratif", deskripsi: "Kerja sama belum merata; peran didominasi beberapa anggota; ada anggota yang kurang terlibat atau kurang didukung", min: 65, max: 77, def: 71 },
+  { nama: "Kurang kolaboratif", deskripsi: "Tidak tampak kerja sama; anggota tampil sendiri-sendiri; pembagian peran tidak jelas; ada anggota yang dibiarkan pasif", min: 0, max: 64, def: 50 },
+];
+
 const KATEGORI_SEED: { kode: string; nama: string; kriteria: KriteriaSeed[] }[] = [
   {
     kode: "kreativitas",
@@ -249,34 +272,24 @@ const KATEGORI_SEED: { kode: string; nama: string; kriteria: KriteriaSeed[] }[] 
     ],
   },
   {
-    kode: "kemasan",
-    nama: "Kemasan",
-    kriteria: [
-      { nama: "Sangat menarik", deskripsi: "Rapi, bersih, higienis, informatif (nama produk, komposisi, tanggal), sangat menarik", min: 90, max: 100, def: 95 },
-      { nama: "Menarik", deskripsi: "Rapi dan cukup informatif", min: 78, max: 89, def: 84 },
-      { nama: "Cukup", deskripsi: "Kurang rapi atau kurang informatif", min: 65, max: 77, def: 71 },
-      { nama: "Kurang", deskripsi: "Tidak rapi, tidak higienis, tanpa informasi produk", min: 0, max: 64, def: 50 },
-    ],
-  },
-  {
-    kode: "rasa",
-    nama: "Rasa",
-    kriteria: [
-      { nama: "Sangat enak", deskripsi: "Rasa seimbang, tekstur pas, aroma menggugah, disukai", min: 90, max: 100, def: 95 },
-      { nama: "Enak", deskripsi: "Rasa baik, sedikit kurang pas di satu aspek", min: 78, max: 89, def: 84 },
-      { nama: "Cukup", deskripsi: "Rasa standar, kurang seimbang", min: 65, max: 77, def: 71 },
-      { nama: "Kurang", deskripsi: "Rasa tidak enak / produk gagal", min: 0, max: 64, def: 50 },
-    ],
+    kode: "penalaran_kritis",
+    nama: "Penalaran Kritis",
+    kriteria: KRITERIA_PENALARAN_KRITIS,
   },
   {
     kode: "kolaborasi",
     nama: "Kolaborasi (saat membuat)",
     kriteria: [
-      { nama: "Sangat kompak", deskripsi: "Semua anggota terlibat aktif, pembagian tugas jelas dan adil", min: 90, max: 100, def: 95 },
+      { nama: "Sangat kompak", deskripsi: "Semua anggota terlibat aktif, pembagian tugas jelas dan adil, saling menghargai kontribusi setiap anggota", min: 90, max: 100, def: 95 },
       { nama: "Kompak", deskripsi: "Sebagian besar terlibat, ada 1–2 anggota kurang aktif", min: 78, max: 89, def: 84 },
       { nama: "Cukup", deskripsi: "Hanya beberapa anggota yang bekerja", min: 65, max: 77, def: 71 },
       { nama: "Kurang", deskripsi: "Dikerjakan 1–2 orang saja, anggota lain pasif", min: 0, max: 64, def: 50 },
     ],
+  },
+  {
+    kode: "kualitas_produk",
+    nama: "Kualitas Produk",
+    kriteria: KRITERIA_KUALITAS_PRODUK,
   },
 ];
 
@@ -335,14 +348,9 @@ const SENAM_KATEGORI_SEED: { kode: string; nama: string; kriteria: KriteriaSeed[
     ],
   },
   {
-    kode: "penampilan",
-    nama: "Penampilan & Kerja Sama Tim",
-    kriteria: [
-      { nama: "Sangat baik", deskripsi: "Ekspresi percaya diri dan bersemangat, semua anggota aktif berperan, kostum/atribut rapi dan seragam", min: 90, max: 100, def: 95 },
-      { nama: "Baik", deskripsi: "Percaya diri, sebagian besar anggota aktif, kostum cukup rapi", min: 78, max: 89, def: 84 },
-      { nama: "Cukup", deskripsi: "Ekspresi datar, ada anggota yang pasif, kostum kurang seragam", min: 65, max: 77, def: 71 },
-      { nama: "Kurang", deskripsi: "Tampil tidak bersemangat, banyak anggota pasif, kostum tidak rapi/tidak seragam", min: 0, max: 64, def: 50 },
-    ],
+    kode: "kolaborasi",
+    nama: "Kolaborasi & Kerja Sama Tim",
+    kriteria: KRITERIA_KOLABORASI_SENAM,
   },
 ];
 
@@ -361,6 +369,82 @@ export function seedSenamKategori(): void {
       insKri.run(katId, kr.nama, kr.deskripsi, kr.min, kr.max, kr.def, kri + 1);
     });
   });
+}
+
+// ---------------------------------------------------------------------------
+// Penyesuaian rubrik berbasis Dimensi Profil Lulusan (keputusan Pak Gun,
+// 2026-10-23). Projek menargetkan dimensi Kreativitas, Penalaran Kritis, dan
+// Kolaborasi; senam menargetkan Kreativitas dan Kolaborasi.
+//
+// Fungsi ini hanya bekerja pada DB berstruktur LAMA (masih ada kategori
+// 'kemasan'/'rasa' pada projek atau 'penampilan' pada senam); pada DB baru
+// tidak mengubah apa pun dan aman dipanggil setiap boot.
+//
+// Cara kerja: baris kategori & kriteria yang sama DIPAKAI ULANG (kode, nama,
+// dan deskripsi diganti), sehingga baris penilaian yang sudah ada tidak
+// hilang dan nilai angkanya tetap tersimpan:
+// - projek: 'kemasan' -> Kualitas Produk (penilaian kemasan terbawa wajar),
+//   'rasa' -> Penalaran Kritis (barisnya dipakai ulang; nilai rasa lama
+//   tetap tersimpan pada kategori barunya),
+//   urutan diselaraskan 1 Kreativitas, 2 Penalaran Kritis, 3 Kolaborasi,
+//   4 Kualitas Produk.
+// - senam: 'penampilan' -> Kolaborasi & Kerja Sama Tim, kriteria diganti
+//   dengan kriteria berbasis dimensi Kolaborasi.
+// ---------------------------------------------------------------------------
+
+function gantiKriteriaInPlace(
+  db: Database,
+  tabel: "kriteria" | "senam_kriteria",
+  kategoriId: number,
+  set: KriteriaSeed[]
+): void {
+  const upd = db.query(
+    `UPDATE ${tabel} SET nama = ?, deskripsi = ?, skor_min = ?, skor_max = ?, skor_default = ?
+     WHERE kategori_id = ? AND urutan = ?`
+  );
+  set.forEach((kr, i) => upd.run(kr.nama, kr.deskripsi, kr.min, kr.max, kr.def, kategoriId, i + 1));
+}
+
+export function sesuaikanRubrikDimensi(): void {
+  const db = getDb();
+
+  // --- projek ---
+  const rasa = db.query("SELECT id FROM kategori WHERE kode = 'rasa'").get() as { id: number } | null;
+  const kemasan = db.query("SELECT id FROM kategori WHERE kode = 'kemasan'").get() as { id: number } | null;
+  if (rasa || kemasan) {
+    const tx = db.transaction(() => {
+      if (rasa) {
+        db.query("UPDATE kategori SET kode = 'penalaran_kritis', nama = 'Penalaran Kritis', urutan = 2 WHERE id = ?").run(rasa.id);
+        gantiKriteriaInPlace(db, "kriteria", rasa.id, KRITERIA_PENALARAN_KRITIS);
+      }
+      if (kemasan) {
+        db.query("UPDATE kategori SET kode = 'kualitas_produk', nama = 'Kualitas Produk', urutan = 4 WHERE id = ?").run(kemasan.id);
+        gantiKriteriaInPlace(db, "kriteria", kemasan.id, KRITERIA_KUALITAS_PRODUK);
+      }
+      db.query("UPDATE kategori SET urutan = 1 WHERE kode = 'kreativitas'").run();
+      db.query("UPDATE kategori SET urutan = 3 WHERE kode = 'kolaborasi'").run();
+      const kol = db.query("SELECT id FROM kategori WHERE kode = 'kolaborasi'").get() as { id: number } | null;
+      if (kol) {
+        db.query("UPDATE kriteria SET deskripsi = ? WHERE kategori_id = ? AND urutan = 1").run(
+          "Semua anggota terlibat aktif, pembagian tugas jelas dan adil, saling menghargai kontribusi setiap anggota",
+          kol.id
+        );
+      }
+    });
+    tx();
+  }
+
+  // --- senam ---
+  const penampilan = db
+    .query("SELECT id FROM senam_kategori WHERE kode = 'penampilan'")
+    .get() as { id: number } | null;
+  if (penampilan) {
+    const tx = db.transaction(() => {
+      db.query("UPDATE senam_kategori SET kode = 'kolaborasi', nama = 'Kolaborasi & Kerja Sama Tim' WHERE id = ?").run(penampilan.id);
+      gantiKriteriaInPlace(db, "senam_kriteria", penampilan.id, KRITERIA_KOLABORASI_SENAM);
+    });
+    tx();
+  }
 }
 
 export async function ensureAdmin(): Promise<{ username: string; generatedPassword: string | null }> {

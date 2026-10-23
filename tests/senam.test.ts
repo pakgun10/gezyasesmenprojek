@@ -55,7 +55,7 @@ describe("senam: seed", () => {
       "kekompakan",
       "teknik",
       "kreativitas_senam",
-      "penampilan",
+      "kolaborasi",
     ]);
     for (const k of b.kategori) {
       expect(k.kriteria.length).toBe(4);
@@ -71,7 +71,7 @@ describe("senam: seed", () => {
     const res = await app.request("/api/kategori", { headers: { cookie } });
     const b = await res.json();
     expect(b.kategori.length).toBe(4);
-    expect(b.kategori.map((k: any) => k.kode)).toEqual(["kreativitas", "kemasan", "rasa", "kolaborasi"]);
+    expect(b.kategori.map((k: any) => k.kode)).toEqual(["kreativitas", "penalaran_kritis", "kolaborasi", "kualitas_produk"]);
   });
 
   test("endpoint senam admin tanpa login -> 401", async () => {

@@ -44,7 +44,7 @@ describe("seed & auth", () => {
     expect(res.status).toBe(200);
     const b = await res.json();
     expect(b.kategori.length).toBe(4);
-    expect(b.kategori.map((k: any) => k.kode)).toEqual(["kreativitas", "kemasan", "rasa", "kolaborasi"]);
+    expect(b.kategori.map((k: any) => k.kode)).toEqual(["kreativitas", "penalaran_kritis", "kolaborasi", "kualitas_produk"]);
     for (const k of b.kategori) {
       expect(k.kriteria.length).toBe(4);
       for (const kr of k.kriteria) {
@@ -359,6 +359,39 @@ describe("hasil, peringkat & berita acara", () => {
   test("juri tidak bisa akses hasil admin", async () => {
     const res = await app.request(`/api/hasil?kelas_id=${kelasId}`, { headers: { cookie: juri2Cookie } });
     expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("migrasi rubrik dimensi (2026-10-23)", () => {
+  test("struktur lama -> struktur dimensi; nilai lama tidak hilang; idempoten", async () => {
+    const cookie = await loginAdmin();
+    const { getDb, sesuaikanRubrikDimensi } = await import("../src/db");
+    const db = getDb();
+    const jmlNilai = (db.query("SELECT COUNT(*) n FROM penilaian").get() as { n: number }).n;
+    expect(jmlNilai).toBeGreaterThan(0);
+    // Kembalikan DB ke struktur lama (seolah-olah DB versi sebelum 2026-10-23)
+    db.query("UPDATE kategori SET kode='rasa', nama='Rasa', urutan=3 WHERE kode='penalaran_kritis'").run();
+    db.query("UPDATE kategori SET kode='kemasan', nama='Kemasan', urutan=2 WHERE kode='kualitas_produk'").run();
+    db.query("UPDATE senam_kategori SET kode='penampilan', nama='Penampilan & Kerja Sama Tim' WHERE kode='kolaborasi'").run();
+    // Jalankan penyesuaian dua kali — harus idempoten
+    sesuaikanRubrikDimensi();
+    sesuaikanRubrikDimensi();
+    // Projek: urutan & isi kategori baru
+    let res = await app.request("/api/kategori", { headers: { cookie } });
+    let b = await res.json();
+    expect(b.kategori.map((k: any) => k.kode)).toEqual(["kreativitas", "penalaran_kritis", "kolaborasi", "kualitas_produk"]);
+    expect(b.kategori.find((k: any) => k.kode === "penalaran_kritis").kriteria[0].nama).toBe("Sangat kritis");
+    expect(b.kategori.find((k: any) => k.kode === "kualitas_produk").kriteria[0].nama).toBe("Sangat baik");
+    // Senam: kategori kolaborasi baru
+    res = await app.request("/api/senam/kategori", { headers: { cookie } });
+    b = await res.json();
+    const kol = b.kategori.find((k: any) => k.kode === "kolaborasi");
+    expect(kol.nama).toBe("Kolaborasi & Kerja Sama Tim");
+    expect(kol.kriteria[0].nama).toBe("Sangat kolaboratif");
+    // Nilai yang sudah masuk tidak hilang
+    const sesudah = (db.query("SELECT COUNT(*) n FROM penilaian").get() as { n: number }).n;
+    expect(sesudah).toBe(jmlNilai);
   });
 });
 

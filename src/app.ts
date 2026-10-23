@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
-import { initDb, ensureAdmin, seedKategori, seedSenamKategori } from "./db";
+import { initDb, ensureAdmin, seedKategori, seedSenamKategori, sesuaikanRubrikDimensi } from "./db";
 import { loginHandler, logoutHandler, requireAuth } from "./auth";
 import adminRoutes from "./admin";
 import scoringRoutes from "./scoring";
@@ -12,6 +12,7 @@ export async function bootApp(dataDir: string) {
   initDb(dataDir);
   seedKategori();
   seedSenamKategori();
+  sesuaikanRubrikDimensi();
   const admin = await ensureAdmin();
   if (admin.generatedPassword) {
     console.log("==============================================");
