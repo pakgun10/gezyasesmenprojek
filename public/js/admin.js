@@ -120,6 +120,7 @@
     else if (name === "kriteria") loadKriteriaTab();
     else if (name === "senam") loadSenamTab();
     else if (name === "log") loadLogTab();
+    else if (name === "akun") loadAkunTab();
     // tab hasil dimuat manual via tombol
   }
 
@@ -1237,6 +1238,78 @@
       var d = await apiJson("/api/log/lama?hari=30", "DELETE");
       showAlert(d.terhapus + " log lama terhapus.", "success");
       loadLogTab();
+    } catch (e) { handleErr(e); }
+  });
+
+  // ---------- AKUN ADMIN ----------
+  async function loadAkunTab() {
+    var tb = $("tbl-akun").querySelector("tbody");
+    tb.innerHTML = loadingRow(4, "Memuat akun…");
+    try {
+      var d = await apiJson("/api/users");
+      tb.innerHTML = (d.users || []).map(function (u) {
+        var saya = u.id === d.saya;
+        return "<tr><td><b>" + esc(u.username) + "</b>" + (saya ? ' <span class="badge badge-green">Anda</span>' : "") + "</td>" +
+          "<td>" + fmtWaktuLog(u.created_at) + "</td>" +
+          '<td class="num">' + esc(u.sesi_aktif) + "</td>" +
+          "<td>" +
+          '<button type="button" class="btn btn-ghost btn-sm" data-areset="' + u.id + '" data-auser="' + esc(u.username) + '">🔑 Reset Password</button> ' +
+          (saya ? "" : '<button type="button" class="btn btn-danger btn-sm" data-adel="' + u.id + '" data-auser="' + esc(u.username) + '">Hapus</button>') +
+          "</td></tr>";
+      }).join("") || '<tr><td colspan="4" class="muted">Belum ada akun.</td></tr>';
+      tb.querySelectorAll("[data-areset]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          $("akun-reset-id").value = b.getAttribute("data-areset");
+          $("akun-reset-username").textContent = b.getAttribute("data-auser");
+          $("akun-reset-password").value = "";
+          $("akun-reset-password2").value = "";
+          $("akun-reset-panel").classList.remove("hidden");
+          $("akun-reset-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+      tb.querySelectorAll("[data-adel]").forEach(function (b) {
+        b.addEventListener("click", async function () {
+          var nama = b.getAttribute("data-auser");
+          if (!confirm("Hapus akun admin \"" + nama + "\"? Akun ini tidak bisa login lagi dan semua sesinya akan mati.")) return;
+          try {
+            await apiJson("/api/users/" + b.getAttribute("data-adel"), "DELETE");
+            showAlert("Akun \"" + nama + "\" terhapus.", "success");
+            loadAkunTab();
+          } catch (e) { handleErr(e); }
+        });
+      });
+    } catch (e) { handleErr(e); }
+  }
+
+  $("form-akun").addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    var username = $("akun-username").value.trim();
+    var pw = $("akun-password").value;
+    if (pw !== $("akun-password2").value) { showAlert("Ulangi password tidak sama dengan password."); return; }
+    try {
+      await apiJson("/api/users", "POST", { username: username, password: pw });
+      showAlert("Akun admin \"" + username + "\" ditambahkan.", "success");
+      $("form-akun").reset();
+      loadAkunTab();
+    } catch (e) { handleErr(e); }
+  });
+
+  $("akun-reset-batal").addEventListener("click", function () {
+    $("akun-reset-panel").classList.add("hidden");
+  });
+
+  $("form-akun-reset").addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    var id = $("akun-reset-id").value;
+    var nama = $("akun-reset-username").textContent;
+    var pw = $("akun-reset-password").value;
+    if (pw !== $("akun-reset-password2").value) { showAlert("Ulangi password baru tidak sama."); return; }
+    if (!confirm("Reset password akun \"" + nama + "\"? Semua sesi akun ini akan mati dan harus login ulang.")) return;
+    try {
+      await apiJson("/api/users/" + id + "/password", "PUT", { password: pw });
+      $("akun-reset-panel").classList.add("hidden");
+      showAlert("Password akun \"" + nama + "\" sudah diganti. Bila itu akun Anda sendiri, silakan login ulang.", "success");
+      loadAkunTab();
     } catch (e) { handleErr(e); }
   });
 

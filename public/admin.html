@@ -50,6 +50,7 @@
           <button type="button" class="tab-btn" data-tab="hasil">🏆 Hasil</button>
           <button type="button" class="tab-btn" data-tab="senam">🤸 Senam</button>
           <button type="button" class="tab-btn" data-tab="log">📜 Log</button>
+          <button type="button" class="tab-btn" data-tab="akun">🔐 Akun</button>
         </nav>
 
         <!-- DASBOR -->
@@ -359,6 +360,49 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
             </table></div>
           </div>
         </div>
+
+        <!-- AKUN ADMIN -->
+        <div class="tab-panel" id="tab-akun">
+          <div class="card">
+            <h3>🔐 Tambah Akun Admin</h3>
+            <p class="muted small">Akun admin baru berhak penuh seperti admin utama: mengelola kelas, kelompok, penilai, hasil, dan akun. Username 3–32 karakter (huruf, angka, titik, strip, garis bawah); password minimal 6 karakter.</p>
+            <form id="form-akun">
+              <div class="form-row">
+                <div class="form-group"><label for="akun-username">Username</label><input type="text" id="akun-username" placeholder="cth: helmi" autocomplete="off" required></div>
+                <div class="form-group"><label for="akun-password">Password</label><input type="password" id="akun-password" placeholder="minimal 6 karakter" autocomplete="new-password" required></div>
+                <div class="form-group"><label for="akun-password2">Ulangi Password</label><input type="password" id="akun-password2" placeholder="ketik ulang password" autocomplete="new-password" required></div>
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary">➕ Tambah Akun</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card hidden" id="akun-reset-panel">
+            <h3>🔑 Reset Password — <span id="akun-reset-username"></span></h3>
+            <p class="muted small">Setelah reset, semua sesi login akun ini di perangkat mana pun akan mati dan harus login ulang dengan password baru.</p>
+            <form id="form-akun-reset">
+              <input type="hidden" id="akun-reset-id">
+              <div class="form-row">
+                <div class="form-group"><label for="akun-reset-password">Password baru</label><input type="password" id="akun-reset-password" placeholder="minimal 6 karakter" autocomplete="new-password" required></div>
+                <div class="form-group"><label for="akun-reset-password2">Ulangi Password baru</label><input type="password" id="akun-reset-password2" placeholder="ketik ulang password baru" autocomplete="new-password" required></div>
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary">💾 Simpan Password Baru</button>
+                <button type="button" class="btn btn-ghost" id="akun-reset-batal">Batal</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3>Daftar Akun Admin</h3>
+            <div class="table-wrap"><table class="data" id="tbl-akun">
+              <thead><tr><th>Username</th><th>Dibuat</th><th class="num">Sesi Aktif</th><th>Aksi</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+            <p class="muted small">Anda tidak bisa menghapus akun sendiri, dan admin terakhir tidak bisa dihapus.</p>
+          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -366,7 +410,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
   <!-- Area cetak: hanya tampil saat print -->
   <div id="print-area"><div class="ba-doc" id="ba-doc"></div></div>
 
-  <script src="js/admin.js?v=20261023c"></script>
+  <script src="js/admin.js?v=20261023d"></script>
   <script src="js/common.js?v=20261023b"></script>
 </body>
 </html>

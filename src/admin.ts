@@ -451,6 +451,77 @@ sec("put", "/kriteria/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+// ---------------------------------------------------------------- akun admin
+// Kelola akun admin (tabel users). Semua akun berhak penuh (belum ada peran
+// terbatas). Password TIDAK PERNAH dikembalikan ke klien, dan TIDAK dicatat
+// ke log — yang tercatat hanya username dan jenis aksinya.
+const USERNAME_RE = /^[A-Za-z0-9._-]{3,32}$/;
+
+sec("get", "/users", (c) => {
+  const rows = getDb()
+    .query(
+      `SELECT u.id, u.username, u.role, u.created_at,
+              (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id AND s.expires_at > datetime('now')) AS sesi_aktif
+       FROM users u ORDER BY u.id`
+    )
+    .all();
+  const me = c.get("user") as { id: number };
+  return c.json({ users: rows, saya: me.id });
+});
+
+sec("post", "/users", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const username = (b.username || "").trim();
+  const password = String(b.password || "");
+  if (!USERNAME_RE.test(username))
+    return bad(c, "Username 3–32 karakter: huruf, angka, titik, strip, atau garis bawah");
+  if (password.length < 6) return bad(c, "Password minimal 6 karakter");
+  try {
+    const hash = await Bun.password.hash(password);
+    const r = getDb()
+      .query("INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'admin')")
+      .run(username, hash);
+    logAdmin(c, "Tambah akun admin", username);
+    return c.json({ ok: true, id: Number(r.lastInsertRowid) });
+  } catch {
+    return bad(c, "Username sudah dipakai");
+  }
+});
+
+// Reset password: semua sesi akun itu (di perangkat mana pun) dimatikan,
+// sehingga password lama tidak menyisakan sesi yang masih hidup.
+sec("put", "/users/:id/password", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const password = String(b.password || "");
+  if (password.length < 6) return bad(c, "Password minimal 6 karakter");
+  const db = getDb();
+  const target = db.query("SELECT id, username FROM users WHERE id = ?").get(c.req.param("id")) as
+    | { id: number; username: string }
+    | null;
+  if (!target) return bad(c, "Akun tidak ditemukan", 404);
+  const hash = await Bun.password.hash(password);
+  db.query("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, target.id);
+  db.query("DELETE FROM sessions WHERE user_id = ?").run(target.id);
+  logAdmin(c, "Reset password akun admin", target.username);
+  return c.json({ ok: true });
+});
+
+sec("delete", "/users/:id", (c) => {
+  const db = getDb();
+  const target = db.query("SELECT id, username FROM users WHERE id = ?").get(c.req.param("id")) as
+    | { id: number; username: string }
+    | null;
+  if (!target) return bad(c, "Akun tidak ditemukan", 404);
+  const total = (db.query("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n;
+  if (total <= 1) return bad(c, "Tidak bisa menghapus admin terakhir — aplikasi harus selalu punya admin");
+  const me = c.get("user") as { id: number };
+  if (target.id === me.id) return bad(c, "Tidak bisa menghapus akun Anda sendiri — minta admin lain yang menghapusnya");
+  db.query("DELETE FROM sessions WHERE user_id = ?").run(target.id);
+  db.query("DELETE FROM users WHERE id = ?").run(target.id);
+  logAdmin(c, "Hapus akun admin", target.username);
+  return c.json({ ok: true });
+});
+
 // ---------------------------------------------------------------- log aktivitas
 // Daftar log terbaru untuk menu "Log" di halaman admin.
 // Query: ?limit= (default 200, maks 500) &q= (cari aktor/aksi/detail) &peran=admin|penilai
