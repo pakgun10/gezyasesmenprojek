@@ -77,6 +77,13 @@ body {
 .feature { background: var(--card); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); text-align: left; }
 .feature b { color: var(--navy); }
 .footer { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 28px 16px; }
+.global-footer {
+  text-align: center; color: var(--muted); font-size: 0.82rem;
+  padding: 1.6rem 1rem 1.4rem; margin-top: 2rem;
+  border-top: 1px solid var(--line);
+}
+.global-footer .foot-sub { font-size: 0.75rem; margin-top: 0.25rem; }
+@media print { .global-footer { display: none; } }
 
 /* ---------- kartu & layout ---------- */
 main.wrap { padding-top: 20px; padding-bottom: 48px; }
