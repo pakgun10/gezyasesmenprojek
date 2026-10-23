@@ -52,8 +52,11 @@ body {
   padding: 56px 16px 48px;
   border-bottom: 5px solid var(--gold);
 }
-.hero h1 { margin: 0 0 8px; font-size: 1.9rem; }
+.hero h1 { margin: 0 0 8px; font-size: 1.9rem; line-height: 1.2; }
+.hero-icon { font-size: 2.4rem; line-height: 1; margin-bottom: 10px; }
 .hero p { margin: 0 auto 28px; max-width: 560px; color: #d7e3f2; }
+.hero .hero-sub { font-size: 1.15rem; font-weight: 600; color: #fff; margin-bottom: 14px; line-height: 1.45; }
+.hero .hero-tema { margin-bottom: 28px; line-height: 1.6; }
 .hero .cta-row { display: flex; flex-direction: column; gap: 14px; max-width: 420px; margin: 0 auto; }
 .btn-big {
   display: block;
