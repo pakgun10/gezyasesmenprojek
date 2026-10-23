@@ -39,7 +39,7 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 .topbar-in { display: flex; align-items: center; gap: 12px; }
-.brand { font-weight: 700; font-size: 1.05rem; }
+.brand { font-weight: 700; font-size: 1.05rem; min-width: 0; line-height: 1.35; }
 .brand a { color: #fff; text-decoration: none; }
 .topbar .spacer { flex: 1; }
 .topbar .who { color: #ffd964; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45vw; }
