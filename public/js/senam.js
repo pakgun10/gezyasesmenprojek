@@ -328,7 +328,14 @@
     }
   }
 
-  $("btn-selesai").addEventListener("click", loadKelompok);
+  $("btn-selesai").addEventListener("click", function () {
+    var total = (state.kategori || []).length || state.totalKategori;
+    if (state.nilaiSaya.length < total) {
+      showAlert("Belum semua kategori tersimpan. Pilih kriteria, isi skor, lalu tekan Simpan Nilai pada setiap kategori.");
+      return;
+    }
+    loadKelompok();
+  });
 
   // ---------- 5. foto penampilan (opsional) ----------
   function renderFoto() {
