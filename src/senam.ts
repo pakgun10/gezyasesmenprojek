@@ -416,7 +416,7 @@ sec("get", "/senam/hasil/export.csv", (c) => {
     const s = v == null ? "" : String(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const head = ["Peringkat", "Kelompok", "Judul Penampilan", "Jml Anggota", "Jml Juri Penilai",
+  const head = ["Peringkat", "Kelompok", "Judul Penampilan", "Jml Anggota", "Jml Penilai",
     ...h.kategori.map((k) => k.nama), "Total (maks 400)"];
   const lines = [head.map(esc).join(",")];
   for (const r of h.hasil) {

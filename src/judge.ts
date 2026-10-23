@@ -51,7 +51,7 @@ export async function judgeLoginHandler(c: Context) {
     const r = fails.get(ip);
     if (!r || now >= r.resetAt) fails.set(ip, { count: 1, resetAt: now + WINDOW_MS });
     else r.count++;
-    return c.json({ error: "Kode juri atau PIN salah" }, 401);
+    return c.json({ error: "Kode penilai atau PIN salah" }, 401);
   }
   fails.delete(ip);
   const token = randomBytes(32).toString("hex");
@@ -77,7 +77,7 @@ export async function judgeLogoutHandler(c: Context) {
 
 export const requireJudge = createMiddleware(async (c, next) => {
   const token = getCookie(c, JUDGE_COOKIE);
-  if (!token) return c.json({ error: "Juri belum login" }, 401);
+  if (!token) return c.json({ error: "Penilai belum login" }, 401);
   const row = getDb()
     .query(
       `SELECT js.id AS token, j.id, j.kode, j.nama, js.expires_at
@@ -90,10 +90,10 @@ export const requireJudge = createMiddleware(async (c, next) => {
     nama: string;
     expires_at: string;
   } | null;
-  if (!row) return c.json({ error: "Sesi juri tidak valid" }, 401);
+  if (!row) return c.json({ error: "Sesi penilai tidak valid" }, 401);
   if (new Date(row.expires_at.replace(" ", "T") + "Z").getTime() < Date.now()) {
     getDb().query("DELETE FROM judge_sessions WHERE id = ?").run(token);
-    return c.json({ error: "Sesi juri kedaluwarsa, silakan login lagi" }, 401);
+    return c.json({ error: "Sesi penilai kedaluwarsa, silakan login lagi" }, 401);
   }
   c.set("juri", { id: row.id, kode: row.kode, nama: row.nama });
   await next();

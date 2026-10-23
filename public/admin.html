@@ -45,7 +45,7 @@
           <button type="button" class="tab-btn" data-tab="kelas">🏫 Kelas</button>
           <button type="button" class="tab-btn" data-tab="cabang">🌿 Cabang Produk</button>
           <button type="button" class="tab-btn" data-tab="kelompok">👥 Kelompok</button>
-          <button type="button" class="tab-btn" data-tab="juri">🧑‍⚖️ Juri</button>
+          <button type="button" class="tab-btn" data-tab="juri">🧑‍⚖️ Penilai</button>
           <button type="button" class="tab-btn" data-tab="kriteria">🎯 Kriteria</button>
           <button type="button" class="tab-btn" data-tab="hasil">🏆 Hasil</button>
           <button type="button" class="tab-btn" data-tab="senam">🤸 Senam</button>
@@ -170,7 +170,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
           <div class="card">
             <h3>Daftar Kelompok <span class="muted small" id="kelompok-count"></span></h3>
             <div class="table-wrap"><table class="data" id="tbl-kelompok">
-              <thead><tr><th>Kelompok</th><th>Kelas</th><th>Cabang</th><th>Produk</th><th class="num">Siswa</th><th class="num">Juri</th><th class="num">Foto</th><th>Aksi</th></tr></thead>
+              <thead><tr><th>Kelompok</th><th>Kelas</th><th>Cabang</th><th>Produk</th><th class="num">Siswa</th><th class="num">Penilai</th><th class="num">Foto</th><th>Aksi</th></tr></thead>
               <tbody></tbody>
             </table></div>
           </div>
@@ -179,12 +179,12 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
         <!-- JURI -->
         <div class="tab-panel" id="tab-juri">
           <div class="card">
-            <h3 id="juri-form-title">Tambah Juri</h3>
+            <h3 id="juri-form-title">Tambah Penilai</h3>
             <form id="form-juri">
               <input type="hidden" id="juri-id">
               <div class="form-row">
-                <div class="form-group"><label for="juri-kode">Kode juri</label><input type="text" id="juri-kode" placeholder="cth: JURI1" required></div>
-                <div class="form-group"><label for="juri-nama">Nama juri</label><input type="text" id="juri-nama" placeholder="Nama lengkap" required></div>
+                <div class="form-group"><label for="juri-kode">Kode penilai</label><input type="text" id="juri-kode" placeholder="cth: JURI1" required></div>
+                <div class="form-group"><label for="juri-nama">Nama penilai</label><input type="text" id="juri-nama" placeholder="Nama lengkap" required></div>
               </div>
               <div class="form-row">
                 <div class="form-group"><label for="juri-pin">PIN <span class="hint">(4–8 digit angka; kosongkan = tidak diubah saat edit)</span></label><input type="password" id="juri-pin" inputmode="numeric" placeholder="cth: 1234"></div>
@@ -197,7 +197,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
             </form>
           </div>
           <div class="card">
-            <h3>Daftar Juri</h3>
+            <h3>Daftar Penilai</h3>
             <div class="table-wrap"><table class="data" id="tbl-juri">
               <thead><tr><th>Kode</th><th>Nama</th><th>Keterangan</th><th class="num">Kelompok dinilai</th><th>Aksi</th></tr></thead>
               <tbody></tbody>
@@ -251,7 +251,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
 
         <!-- SENAM -->
         <div class="tab-panel" id="tab-senam">
-          <p class="muted small">Modul Asesmen Performa Senam Berkelompok — terpisah dari Penilaian Projek (data, kriteria, dan hasil sendiri). Kelas dan akun juri dipakai bersama.</p>
+          <p class="muted small">Modul Asesmen Performa Senam Berkelompok — terpisah dari Penilaian Projek (data, kriteria, dan hasil sendiri). Kelas dan akun penilai dipakai bersama.</p>
 
           <div class="card">
             <h3 id="senam-kelompok-form-title">Tambah Kelompok Senam</h3>
@@ -283,7 +283,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
           <div class="card">
             <h3>Daftar Kelompok Senam <span class="muted small" id="senam-kelompok-count"></span></h3>
             <div class="table-wrap"><table class="data" id="tbl-senam-kelompok">
-              <thead><tr><th>Kelompok</th><th>Kelas</th><th>Judul Penampilan</th><th class="num">Anggota</th><th class="num">Juri</th><th class="num">Foto</th><th>Aksi</th></tr></thead>
+              <thead><tr><th>Kelompok</th><th>Kelas</th><th>Judul Penampilan</th><th class="num">Anggota</th><th class="num">Penilai</th><th class="num">Foto</th><th>Aksi</th></tr></thead>
               <tbody></tbody>
             </table></div>
           </div>
@@ -337,7 +337,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
   <!-- Area cetak: hanya tampil saat print -->
   <div id="print-area"><div class="ba-doc" id="ba-doc"></div></div>
 
-  <script src="js/admin.js"></script>
+  <script src="js/admin.js?v=20261023b"></script>
   <script src="js/common.js?v=20261023b"></script>
 </body>
 </html>

@@ -261,7 +261,7 @@ scoring.get("/hasil/export.csv", requireAuth, (c) => {
     const s = v == null ? "" : String(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const head = ["Peringkat", "Kelompok", "Cabang Produk", "Nama Produk", "Jml Siswa", "Jml Juri Penilai",
+  const head = ["Peringkat", "Kelompok", "Cabang Produk", "Nama Produk", "Jml Siswa", "Jml Penilai",
     ...h.kategori.map((k) => k.nama), "Total (maks 400)"];
   const lines = [head.map(esc).join(",")];
   for (const r of h.hasil) {

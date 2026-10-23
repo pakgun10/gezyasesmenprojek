@@ -136,7 +136,7 @@
         ["🏫", d.total_kelas, "Kelas"],
         ["👥", d.total_kelompok, "Kelompok"],
         ["🎒", d.total_siswa, "Siswa"],
-        ["🧑‍⚖️", d.total_juri, "Juri"],
+        ["🧑‍⚖️", d.total_juri, "Penilai"],
         ["📝", d.total_penilaian, "Nilai masuk"],
         ["📷", d.total_foto, "Foto"]
       ];
@@ -522,7 +522,7 @@
     $("juri-nama").value = "";
     $("juri-pin").value = "";
     $("juri-ket").value = "";
-    $("juri-form-title").textContent = "Tambah Juri";
+    $("juri-form-title").textContent = "Tambah Penilai";
     $("juri-submit").textContent = "Tambah";
     $("juri-batal").classList.add("hidden");
   }
@@ -530,7 +530,7 @@
   async function loadJuriTab() {
     resetJuriForm();
     var tb = $("tbl-juri").querySelector("tbody");
-    tb.innerHTML = loadingRow(5, "Memuat juri…");
+    tb.innerHTML = loadingRow(5, "Memuat penilai…");
     try {
       var d = await apiJson("/api/juri");
       tb.innerHTML = (d.juri || []).map(function (j) {
@@ -539,7 +539,7 @@
           '<td class="num">' + esc(j.jml_kelompok_dinilai) + "</td>" +
           '<td style="white-space:nowrap"><button type="button" class="btn btn-ghost btn-sm" data-jedit="' + j.id + '">✏️</button> ' +
           '<button type="button" class="btn btn-danger btn-sm" data-jdel="' + j.id + '">🗑️</button></td></tr>';
-      }).join("") || '<tr><td colspan="5" class="muted">Belum ada juri.</td></tr>';
+      }).join("") || '<tr><td colspan="5" class="muted">Belum ada penilai.</td></tr>';
       tb.querySelectorAll("[data-jedit]").forEach(function (b) {
         b.addEventListener("click", function () { editJuri(Number(b.getAttribute("data-jedit"))); });
       });
@@ -560,7 +560,7 @@
       $("juri-nama").value = j.nama;
       $("juri-pin").value = "";
       $("juri-ket").value = j.keterangan || "";
-      $("juri-form-title").textContent = "Ubah Juri";
+      $("juri-form-title").textContent = "Ubah Penilai";
       $("juri-submit").textContent = "💾 Simpan";
       $("juri-batal").classList.remove("hidden");
       window.scrollTo(0, 0);
@@ -568,7 +568,7 @@
   }
 
   async function hapusJuri(id) {
-    if (!confirm("Hapus juri ini? Semua nilai dan fotonya ikut terhapus!")) return;
+    if (!confirm("Hapus penilai ini? Semua nilai dan fotonya ikut terhapus!")) return;
     try {
       await apiJson("/api/juri/" + id, "DELETE");
       loadJuriTab();
@@ -587,7 +587,7 @@
     try {
       if (id) await apiJson("/api/juri/" + id, "PUT", body);
       else await apiJson("/api/juri", "POST", body);
-      showAlert(id ? "Juri diperbarui." : "Juri ditambahkan.", "success");
+      showAlert(id ? "Penilai diperbarui." : "Penilai ditambahkan.", "success");
       loadJuriTab();
     } catch (e) { handleErr(e); }
   });
@@ -671,7 +671,7 @@
     var belum = d.hasil.filter(function (h) { return !h.lengkap; });
     var head = "<tr><th>Peringkat</th><th>Kelompok</th><th>Cabang</th><th>Nama Produk</th>" +
       kats.map(function (k) { return '<th class="num">' + esc(k.nama) + "</th>"; }).join("") +
-      '<th class="num">Total (maks 400)</th><th class="num">Juri</th></tr>';
+      '<th class="num">Total (maks 400)</th><th class="num">Penilai</th></tr>';
     function row(h) {
       return "<tr" + (h.lengkap ? "" : ' class="total-belum"') + "><td>" +
         (h.peringkat != null ? "🏆 <b>" + esc(h.peringkat) + "</b>" : "—") + "</td>" +
@@ -776,7 +776,7 @@
       '<div class="ba-nomor">Nomor: ' + esc(nomor || "—") + "</div>" +
       "<p>Pada hari ini, <b>" + esc(tanggal || "—") + "</b>, bertempat di <b>" + esc(tempat || "—") +
       "</b>, telah dilaksanakan penilaian projek siswa <b>Kelas " + esc(d.kelas.nama) + "</b> " +
-      "(produk olahan nanas dan makanan ringan) oleh dewan juri. " +
+      "(produk olahan nanas dan makanan ringan) oleh dewan penilai. " +
       "Penilaian meliputi 4 kategori: " + esc(kats.map(function (k) { return k.nama; }).join(", ")) +
       ", masing-masing dengan skala 0–100. Berdasarkan rekapitulasi nilai, ditetapkan peringkat sebagai berikut:</p>";
 
@@ -1059,7 +1059,7 @@
     var belum = d.hasil.filter(function (h) { return !h.lengkap; });
     var head = "<tr><th>Peringkat</th><th>Kelompok</th><th>Judul Penampilan</th>" +
       kats.map(function (k) { return '<th class="num">' + esc(k.nama) + "</th>"; }).join("") +
-      '<th class="num">Total (maks 400)</th><th class="num">Juri</th></tr>';
+      '<th class="num">Total (maks 400)</th><th class="num">Penilai</th></tr>';
     function row(h) {
       return "<tr" + (h.lengkap ? "" : ' class="total-belum"') + "><td>" +
         (h.peringkat != null ? "🏆 <b>" + esc(h.peringkat) + "</b>" : "—") + "</td>" +
@@ -1161,7 +1161,7 @@
       '<div class="ba-nomor">Nomor: ' + esc(nomor || "—") + "</div>" +
       "<p>Pada hari ini, <b>" + esc(tanggal || "—") + "</b>, bertempat di <b>" + esc(tempat || "—") +
       "</b>, telah dilaksanakan asesmen performa senam berkelompok siswa <b>Kelas " + esc(d.kelas.nama) + "</b> " +
-      "oleh dewan juri. " +
+      "oleh dewan penilai. " +
       "Penilaian meliputi 4 kategori: " + esc(kats.map(function (k) { return k.nama; }).join(", ")) +
       ", masing-masing dengan skala 0–100. Berdasarkan rekapitulasi nilai, ditetapkan peringkat sebagai berikut:</p>";
 

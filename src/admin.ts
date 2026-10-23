@@ -361,14 +361,14 @@ sec("post", "/juri", async (c) => {
   const nama = (b.nama || "").trim();
   const pin = String(b.pin || "");
   const keterangan = (b.keterangan || "").trim();
-  if (!kode || !nama) return bad(c, "Kode dan nama juri wajib diisi");
+  if (!kode || !nama) return bad(c, "Kode dan nama penilai wajib diisi");
   if (!/^[0-9]{4,8}$/.test(pin)) return bad(c, "PIN harus 4–8 digit angka");
   try {
     const hash = await Bun.password.hash(pin);
     const r = getDb().query("INSERT INTO juri (kode, nama, pin_hash, keterangan) VALUES (?, ?, ?, ?)").run(kode, nama, hash, keterangan);
     return c.json({ ok: true, id: Number(r.lastInsertRowid) });
   } catch {
-    return bad(c, "Kode juri sudah dipakai");
+    return bad(c, "Kode penilai sudah dipakai");
   }
 });
 
@@ -377,7 +377,7 @@ sec("put", "/juri/:id", async (c) => {
   const nama = (b.nama || "").trim();
   const keterangan = (b.keterangan || "").trim();
   const pin = String(b.pin || "");
-  if (!nama) return bad(c, "Nama juri wajib diisi");
+  if (!nama) return bad(c, "Nama penilai wajib diisi");
   const db = getDb();
   db.query("UPDATE juri SET nama = ?, keterangan = ? WHERE id = ?").run(nama, keterangan, c.req.param("id"));
   if (pin) {
