@@ -119,6 +119,7 @@
     else if (name === "juri") loadJuriTab();
     else if (name === "kriteria") loadKriteriaTab();
     else if (name === "senam") loadSenamTab();
+    else if (name === "log") loadLogTab();
     // tab hasil dimuat manual via tombol
   }
 
@@ -1193,6 +1194,51 @@
 
     $("ba-doc").innerHTML = h;
   }
+
+  // ---------- LOG AKTIVITAS ----------
+  function fmtWaktuLog(s) {
+    // created_at tersimpan sebagai UTC "YYYY-MM-DD HH:MM:SS" -> tampilkan lokal (WIB)
+    var d = new Date(String(s || "").replace(" ", "T") + "Z");
+    if (isNaN(d.getTime())) return esc(s || "");
+    return d.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  async function loadLogTab() {
+    var tb = $("tbl-log").querySelector("tbody");
+    tb.innerHTML = loadingRow(6, "Memuat log…");
+    try {
+      var q = $("log-q").value.trim();
+      var peran = $("log-peran").value;
+      var path = "/api/log?limit=300" +
+        (q ? "&q=" + encodeURIComponent(q) : "") +
+        (peran ? "&peran=" + encodeURIComponent(peran) : "");
+      var d = await apiJson(path);
+      $("log-total").textContent = d.total;
+      tb.innerHTML = (d.log || []).map(function (r) {
+        var badge = r.peran === "admin"
+          ? '<span class="badge badge-blue">Admin</span>'
+          : r.peran === "penilai"
+            ? '<span class="badge badge-gold">Penilai</span>'
+            : esc(r.peran || "");
+        return "<tr><td style=\"white-space:nowrap\">" + fmtWaktuLog(r.created_at) + "</td>" +
+          "<td>" + esc(r.aktor) + "</td><td>" + badge + "</td>" +
+          "<td>" + esc(r.aksi) + "</td><td>" + esc(r.detail || "") + "</td>" +
+          '<td class="muted small">' + esc(r.ip || "") + "</td></tr>";
+      }).join("") || '<tr><td colspan="6" class="muted">Belum ada log yang cocok.</td></tr>';
+    } catch (e) { handleErr(e); }
+  }
+
+  $("btn-log-muat").addEventListener("click", loadLogTab);
+  $("log-peran").addEventListener("change", loadLogTab);
+  $("log-q").addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); loadLogTab(); } });
+  $("btn-log-bersih").addEventListener("click", async function () {
+    if (!confirm("Hapus semua log yang berumur lebih dari 30 hari? Tindakan ini tidak bisa dibatalkan.")) return;
+    try {
+      var d = await apiJson("/api/log/lama?hari=30", "DELETE");
+      showAlert(d.terhapus + " log lama terhapus.", "success");
+      loadLogTab();
+    } catch (e) { handleErr(e); }
+  });
 
   // ---------- start ----------
   boot();

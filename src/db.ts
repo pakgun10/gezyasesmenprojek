@@ -189,6 +189,17 @@ const MIGRATIONS: string[] = [
     mengetahui_jabatan TEXT NOT NULL DEFAULT '',
     dibuat_nama TEXT NOT NULL DEFAULT '',
     updated_at TEXT)`,
+  // Log Aktivitas (2026-10-23): satu tabel pengamat untuk semua modul.
+  // Ditambahkan di AKHIR daftar migrasi agar nomor versi DB lama tidak geser.
+  `CREATE TABLE IF NOT EXISTS aktivitas_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    aktor TEXT NOT NULL DEFAULT '',
+    peran TEXT NOT NULL DEFAULT '',
+    aksi TEXT NOT NULL DEFAULT '',
+    detail TEXT NOT NULL DEFAULT '',
+    ip TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE INDEX IF NOT EXISTS idx_aktivitas_log_waktu ON aktivitas_log(created_at DESC)`,
 ];
 
 export function initDb(dataDir: string): Database {

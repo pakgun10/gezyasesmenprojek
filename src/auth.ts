@@ -3,6 +3,7 @@ import { createMiddleware } from "hono/factory";
 import type { Context } from "hono";
 import { randomBytes } from "node:crypto";
 import { getDb } from "./db";
+import { logAktivitas } from "./log";
 
 const SESSION_COOKIE = "nilaiproyek_session";
 const SESSION_DAYS = 7;
@@ -58,6 +59,7 @@ export async function loginHandler(c: Context) {
     const r = fails.get(ip);
     if (!r || now >= r.resetAt) fails.set(ip, { count: 1, resetAt: now + WINDOW_MS });
     else r.count++;
+    logAktivitas((body.username || "(kosong)").trim() || "(kosong)", "admin", "Login admin gagal", "Username atau password salah", ip);
     return c.json({ error: "Username atau password salah" }, 401);
   }
   fails.delete(ip);
@@ -72,12 +74,19 @@ export async function loginHandler(c: Context) {
     expires
   );
   setCookie(c, SESSION_COOKIE, token, cookieOpts(c));
+  logAktivitas(user!.username, "admin", "Login admin", "", ip);
   return c.json({ ok: true, user: { id: user!.id, username: user!.username, role: user!.role } });
 }
 
 export async function logoutHandler(c: Context) {
   const token = getCookie(c, SESSION_COOKIE);
-  if (token) getDb().query("DELETE FROM sessions WHERE id = ?").run(token);
+  if (token) {
+    const row = getDb()
+      .query("SELECT u.username FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?")
+      .get(token) as { username: string } | null;
+    if (row) logAktivitas(row.username, "admin", "Logout admin", "", clientIp(c));
+    getDb().query("DELETE FROM sessions WHERE id = ?").run(token);
+  }
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
   return c.json({ ok: true });
 }

@@ -4,6 +4,15 @@ import type { Context } from "hono";
 import { randomBytes } from "node:crypto";
 import { getDb } from "./db";
 import { clientIp } from "./auth";
+import { logAktivitas } from "./log";
+
+// Halaman asal login (projek vs senam) dibaca dari referer, untuk detail log.
+function modulDariReferer(c: Context): string {
+  const ref = c.req.header("referer") || "";
+  if (ref.includes("senam")) return "via halaman Senam (Kelas VII)";
+  if (ref.includes("juri")) return "via halaman Projek (Kelas VIII–IX)";
+  return "";
+}
 
 const JUDGE_COOKIE = "nilaiproyek_juri";
 const SESSION_DAYS = 3;
@@ -51,6 +60,7 @@ export async function judgeLoginHandler(c: Context) {
     const r = fails.get(ip);
     if (!r || now >= r.resetAt) fails.set(ip, { count: 1, resetAt: now + WINDOW_MS });
     else r.count++;
+    logAktivitas((body.kode || "(kosong)").trim().toUpperCase() || "(kosong)", "penilai", "Login penilai gagal", modulDariReferer(c), ip);
     return c.json({ error: "Kode penilai atau PIN salah" }, 401);
   }
   fails.delete(ip);
@@ -65,12 +75,19 @@ export async function judgeLoginHandler(c: Context) {
     expires
   );
   setCookie(c, JUDGE_COOKIE, token, cookieOpts());
+  logAktivitas(`${juri!.kode} — ${juri!.nama}`, "penilai", "Login penilai", modulDariReferer(c), ip);
   return c.json({ ok: true, juri: { id: juri!.id, kode: juri!.kode, nama: juri!.nama } });
 }
 
 export async function judgeLogoutHandler(c: Context) {
   const token = getCookie(c, JUDGE_COOKIE);
-  if (token) getDb().query("DELETE FROM judge_sessions WHERE id = ?").run(token);
+  if (token) {
+    const row = getDb()
+      .query("SELECT j.kode, j.nama FROM judge_sessions js JOIN juri j ON j.id = js.juri_id WHERE js.id = ?")
+      .get(token) as { kode: string; nama: string } | null;
+    if (row) logAktivitas(`${row.kode} — ${row.nama}`, "penilai", "Logout penilai", "", clientIp(c));
+    getDb().query("DELETE FROM judge_sessions WHERE id = ?").run(token);
+  }
   deleteCookie(c, JUDGE_COOKIE, { path: "/" });
   return c.json({ ok: true });
 }

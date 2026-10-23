@@ -49,6 +49,7 @@
           <button type="button" class="tab-btn" data-tab="kriteria">🎯 Kriteria</button>
           <button type="button" class="tab-btn" data-tab="hasil">🏆 Hasil</button>
           <button type="button" class="tab-btn" data-tab="senam">🤸 Senam</button>
+          <button type="button" class="tab-btn" data-tab="log">📜 Log</button>
         </nav>
 
         <!-- DASBOR -->
@@ -330,6 +331,34 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
             <p class="muted small">Berita acara senam memakai kelas yang dipilih di bagian Hasil Senam di atas, dan tersimpan terpisah dari berita acara projek.</p>
           </div>
         </div>
+
+        <!-- LOG -->
+        <div class="tab-panel" id="tab-log">
+          <div class="card">
+            <h3>📜 Log Aktivitas</h3>
+            <p class="muted small">Catatan aktivitas admin dan penilai (login, perubahan data, simpan nilai, ekspor, dan lain-lain), terbaru di atas. Menampilkan maks. 300 baris — total tersimpan: <span id="log-total">–</span>.</p>
+            <div class="form-row">
+              <div class="form-group"><label for="log-q">Cari</label><input type="text" id="log-q" placeholder="aktor, aksi, atau detail…"></div>
+              <div class="form-group"><label for="log-peran">Peran</label>
+                <select id="log-peran">
+                  <option value="">Semua</option>
+                  <option value="admin">Admin</option>
+                  <option value="penilai">Penilai</option>
+                </select>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="btn btn-primary" id="btn-log-muat">🔄 Muat Ulang</button>
+              <button type="button" class="btn btn-ghost" id="btn-log-bersih">🗑️ Hapus Log &gt; 30 Hari</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-wrap"><table class="data" id="tbl-log">
+              <thead><tr><th>Waktu</th><th>Aktor</th><th>Peran</th><th>Aksi</th><th>Detail</th><th>IP</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -337,7 +366,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
   <!-- Area cetak: hanya tampil saat print -->
   <div id="print-area"><div class="ba-doc" id="ba-doc"></div></div>
 
-  <script src="js/admin.js?v=20261023b"></script>
+  <script src="js/admin.js?v=20261023c"></script>
   <script src="js/common.js?v=20261023b"></script>
 </body>
 </html>

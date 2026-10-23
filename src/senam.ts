@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { getDb, getDataDir } from "./db";
 import { requireJudge } from "./judge";
-import { requireAuth } from "./auth";
+import { requireAuth, clientIp } from "./auth";
+import { logAktivitas, aktorAdmin, aktorPenilai } from "./log";
 import { join, extname } from "node:path";
 import { mkdirSync, writeFileSync, unlinkSync, statSync } from "node:fs";
 import { randomBytes } from "node:crypto";
@@ -24,6 +25,10 @@ function sec(method: "get" | "post" | "put" | "delete", path: string, ...handler
 
 function bad(c: any, msg: string, status = 400) {
   return c.json({ error: msg }, status);
+}
+
+function logAdmin(c: any, aksi: string, detail = "") {
+  logAktivitas(aktorAdmin(c), "admin", aksi, detail, clientIp(c));
 }
 
 // ---------------------------------------------------------------- juri senam
@@ -112,14 +117,16 @@ senam.post("/senam/juri/nilai", requireJudge, async (c) => {
   if (!Number.isFinite(skor) || skor < 0 || skor > 100) return c.json({ error: "Skor harus 0–100" }, 400);
   if (skor < kri.skor_min || skor > kri.skor_max)
     return c.json({ error: `Skor harus dalam rentang kriteria (${kri.skor_min}–${kri.skor_max})` }, 400);
-  const kel = db.query("SELECT id FROM senam_kelompok WHERE id = ?").get(kelompok_id);
+  const kel = db.query("SELECT id, nama_kelompok FROM senam_kelompok WHERE id = ?").get(kelompok_id) as { id: number; nama_kelompok: string } | null;
   if (!kel) return c.json({ error: "Kelompok tidak ditemukan" }, 404);
+  const kat = db.query("SELECT nama FROM senam_kategori WHERE id = ?").get(kategori_id) as { nama: string } | null;
   db.query(
     `INSERT INTO senam_penilaian (kelompok_id, juri_id, kategori_id, kriteria_id, skor, updated_at)
      VALUES (?, ?, ?, ?, ?, datetime('now'))
      ON CONFLICT(kelompok_id, juri_id, kategori_id)
      DO UPDATE SET kriteria_id = excluded.kriteria_id, skor = excluded.skor, updated_at = datetime('now')`
   ).run(kelompok_id, juri.id, kategori_id, kriteria_id, skor);
+  logAktivitas(aktorPenilai(c), "penilai", "Simpan nilai senam", `${kel.nama_kelompok} • ${kat ? kat.nama : "kategori " + kategori_id} • skor ${skor}`, clientIp(c));
   return c.json({ ok: true });
 });
 
@@ -148,6 +155,8 @@ senam.post("/senam/juri/foto", requireJudge, async (c) => {
   const r = db
     .query("INSERT INTO senam_foto (kelompok_id, juri_id, filename, mime, size, caption) VALUES (?, ?, ?, ?, ?, ?)")
     .run(kelompok_id, juri.id, filename, file.type, file.size, caption);
+  const kelF = db.query("SELECT nama_kelompok FROM senam_kelompok WHERE id = ?").get(kelompok_id) as { nama_kelompok: string } | null;
+  logAktivitas(aktorPenilai(c), "penilai", "Upload foto senam", kelF ? kelF.nama_kelompok : `kelompok id ${kelompok_id}`, clientIp(c));
   return c.json({ ok: true, id: Number(r.lastInsertRowid), filename });
 });
 
@@ -160,6 +169,7 @@ senam.delete("/senam/juri/foto/:id", requireJudge, (c) => {
   try {
     unlinkSync(join(getDataDir(), "uploads", f.filename));
   } catch {}
+  logAktivitas(aktorPenilai(c), "penilai", "Hapus foto senam", `foto id ${f.id}`, clientIp(c));
   return c.json({ ok: true });
 });
 
@@ -250,6 +260,7 @@ sec("post", "/senam/kelompok", async (c) => {
     const r = db
       .query("INSERT INTO senam_kelompok (kelas_id, nama_kelompok, judul_penampilan) VALUES (?, ?, ?)")
       .run(kelas_id, nama_kelompok, judul_penampilan);
+    logAdmin(c, "Tambah kelompok senam", judul_penampilan ? `${nama_kelompok} — ${judul_penampilan}` : nama_kelompok);
     return c.json({ ok: true, id: Number(r.lastInsertRowid) });
   } catch {
     return bad(c, "Nama kelompok sudah ada di kelas ini");
@@ -270,6 +281,7 @@ sec("put", "/senam/kelompok/:id", async (c) => {
       `UPDATE senam_kelompok SET nama_kelompok = ?, judul_penampilan = ?,
        kelas_id = COALESCE(?, kelas_id) WHERE id = ?`
     ).run(nama_kelompok, judul_penampilan, kelas_id, c.req.param("id"));
+    logAdmin(c, "Ubah kelompok senam", nama_kelompok);
     return c.json({ ok: true });
   } catch {
     return bad(c, "Nama kelompok sudah ada di kelas ini");
@@ -278,6 +290,7 @@ sec("put", "/senam/kelompok/:id", async (c) => {
 
 sec("delete", "/senam/kelompok/:id", (c) => {
   const db = getDb();
+  const kelRow = db.query("SELECT nama_kelompok FROM senam_kelompok WHERE id = ?").get(c.req.param("id")) as { nama_kelompok: string } | null;
   const fotos = db.query("SELECT filename FROM senam_foto WHERE kelompok_id = ?").all(c.req.param("id")) as {
     filename: string;
   }[];
@@ -287,6 +300,7 @@ sec("delete", "/senam/kelompok/:id", (c) => {
       unlinkSync(join(getDataDir(), "uploads", f.filename));
     } catch {}
   }
+  logAdmin(c, "Hapus kelompok senam", kelRow ? kelRow.nama_kelompok : `id ${c.req.param("id")}`);
   return c.json({ ok: true });
 });
 
@@ -297,7 +311,7 @@ sec("put", "/senam/kelompok/:id/anggota", async (c) => {
   if (names.length < 1) return bad(c, "Minimal 1 nama murid");
   if (names.length > 12) return bad(c, "Maksimal 12 murid per kelompok");
   const db = getDb();
-  const kel = db.query("SELECT id FROM senam_kelompok WHERE id = ?").get(c.req.param("id"));
+  const kel = db.query("SELECT id, nama_kelompok FROM senam_kelompok WHERE id = ?").get(c.req.param("id")) as { id: number; nama_kelompok: string } | null;
   if (!kel) return bad(c, "Kelompok tidak ditemukan", 404);
   const del = db.query("DELETE FROM senam_anggota WHERE kelompok_id = ?");
   const ins = db.query("INSERT INTO senam_anggota (kelompok_id, nama, urutan) VALUES (?, ?, ?)");
@@ -306,6 +320,7 @@ sec("put", "/senam/kelompok/:id/anggota", async (c) => {
     list.forEach((n, i) => ins.run(c.req.param("id"), n, i + 1));
   });
   tx(names);
+  logAdmin(c, "Ubah anggota kelompok senam", `${kel.nama_kelompok} • ${names.length} anggota`);
   return c.json({ ok: true, jumlah: names.length });
 });
 
@@ -336,6 +351,7 @@ sec("put", "/senam/kriteria/:id", async (c) => {
   getDb()
     .query("UPDATE senam_kriteria SET nama = ?, deskripsi = ?, skor_min = ?, skor_max = ?, skor_default = ? WHERE id = ?")
     .run(nama, deskripsi, min, max, def, c.req.param("id"));
+  logAdmin(c, "Ubah kriteria senam", `${nama} (${min}–${max})`);
   return c.json({ ok: true });
 });
 
@@ -433,6 +449,7 @@ sec("get", "/senam/hasil/export.csv", (c) => {
     );
   }
   const csv = "\uFEFF" + lines.join("\r\n");
+  logAdmin(c, "Ekspor CSV hasil senam", `Kelas ${h.kelas.nama}`);
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
@@ -474,6 +491,8 @@ sec("put", "/senam/berita-acara", async (c) => {
        dibuat_nama = excluded.dibuat_nama, updated_at = datetime('now')`
   ).run(kelas_id, fields.nomor, fields.tempat, fields.tanggal, fields.mengetahui_nama,
     fields.mengetahui_nip, fields.mengetahui_jabatan, fields.dibuat_nama);
+  const kelB = db.query("SELECT nama FROM kelas WHERE id = ?").get(kelas_id) as { nama: string } | null;
+  logAdmin(c, "Simpan berita acara senam", kelB ? `Kelas ${kelB.nama}` : `kelas id ${kelas_id}`);
   return c.json({ ok: true });
 });
 

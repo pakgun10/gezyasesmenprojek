@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { getDb } from "./db";
-import { requireAuth } from "./auth";
+import { requireAuth, clientIp } from "./auth";
+import { logAktivitas, aktorAdmin } from "./log";
 
 const admin = new Hono();
 // requireAuth dipasang per-route (bukan admin.use("*")) agar tidak bocor
@@ -11,6 +12,11 @@ function sec(method: "get" | "post" | "put" | "delete", path: string, ...handler
 
 function bad(c: any, msg: string, status = 400) {
   return c.json({ error: msg }, status);
+}
+
+// Catat aksi admin ke Log Aktivitas (anti-gagal, lihat src/log.ts).
+function logAdmin(c: any, aksi: string, detail = "") {
+  logAktivitas(aktorAdmin(c), "admin", aksi, detail, clientIp(c));
 }
 
 // ---------------------------------------------------------------- dashboard
@@ -61,6 +67,7 @@ sec("post", "/kelas", async (c) => {
   if (!nama) return bad(c, "Nama kelas wajib diisi");
   try {
     const r = getDb().query("INSERT INTO kelas (nama, tingkat) VALUES (?, ?)").run(nama, tingkat);
+    logAdmin(c, "Tambah kelas", tingkat ? `${nama} (tingkat ${tingkat})` : nama);
     return c.json({ ok: true, id: Number(r.lastInsertRowid) });
   } catch {
     return bad(c, "Nama kelas sudah ada");
@@ -74,6 +81,7 @@ sec("put", "/kelas/:id", async (c) => {
   if (!nama) return bad(c, "Nama kelas wajib diisi");
   try {
     getDb().query("UPDATE kelas SET nama = ?, tingkat = ? WHERE id = ?").run(nama, tingkat, c.req.param("id"));
+    logAdmin(c, "Ubah kelas", tingkat ? `${nama} (tingkat ${tingkat})` : nama);
     return c.json({ ok: true });
   } catch {
     return bad(c, "Nama kelas sudah ada");
@@ -81,7 +89,10 @@ sec("put", "/kelas/:id", async (c) => {
 });
 
 sec("delete", "/kelas/:id", (c) => {
-  getDb().query("DELETE FROM kelas WHERE id = ?").run(c.req.param("id"));
+  const db = getDb();
+  const row = db.query("SELECT nama FROM kelas WHERE id = ?").get(c.req.param("id")) as { nama: string } | null;
+  db.query("DELETE FROM kelas WHERE id = ?").run(c.req.param("id"));
+  logAdmin(c, "Hapus kelas", row ? row.nama : `id ${c.req.param("id")}`);
   return c.json({ ok: true });
 });
 
@@ -123,6 +134,7 @@ sec("post", "/cabang", async (c) => {
     const r = db
       .query("INSERT INTO cabang_produk (kode, nama, deskripsi, urutan) VALUES (?, ?, ?, (SELECT COALESCE(MAX(urutan),0)+1 FROM cabang_produk))")
       .run(finalKode, nama, deskripsi);
+    logAdmin(c, "Tambah cabang produk", nama);
     return c.json({ ok: true, id: Number(r.lastInsertRowid), kode: finalKode });
   } catch {
     return bad(c, "Nama cabang sudah ada");
@@ -136,6 +148,7 @@ sec("put", "/cabang/:id", async (c) => {
   if (!nama) return bad(c, "Nama cabang wajib diisi");
   try {
     getDb().query("UPDATE cabang_produk SET nama = ?, deskripsi = ? WHERE id = ?").run(nama, deskripsi, c.req.param("id"));
+    logAdmin(c, "Ubah cabang produk", nama);
     return c.json({ ok: true });
   } catch {
     return bad(c, "Nama cabang sudah ada");
@@ -146,7 +159,9 @@ sec("delete", "/cabang/:id", (c) => {
   const db = getDb();
   const used = (db.query("SELECT COUNT(*) n FROM kelompok WHERE cabang_id = ?").get(c.req.param("id")) as { n: number }).n;
   if (used > 0) return bad(c, `Cabang masih dipakai ${used} kelompok, tidak bisa dihapus`);
+  const rowC = db.query("SELECT nama FROM cabang_produk WHERE id = ?").get(c.req.param("id")) as { nama: string } | null;
   db.query("DELETE FROM cabang_produk WHERE id = ?").run(c.req.param("id"));
+  logAdmin(c, "Hapus cabang produk", rowC ? rowC.nama : `id ${c.req.param("id")}`);
   return c.json({ ok: true });
 });
 
@@ -207,6 +222,7 @@ sec("post", "/kelompok", async (c) => {
     const r = db
       .query("INSERT INTO kelompok (kelas_id, nama_kelompok, cabang_id, nama_produk) VALUES (?, ?, ?, ?)")
       .run(kelas_id, nama_kelompok, cabang_id, nama_produk);
+    logAdmin(c, "Tambah kelompok projek", nama_produk ? `${nama_kelompok} — ${nama_produk}` : nama_kelompok);
     return c.json({ ok: true, id: Number(r.lastInsertRowid) });
   } catch {
     return bad(c, "Nama kelompok sudah ada di kelas ini");
@@ -228,6 +244,7 @@ sec("put", "/kelompok/:id", async (c) => {
       `UPDATE kelompok SET nama_kelompok = ?, nama_produk = ?,
        cabang_id = COALESCE(?, cabang_id), kelas_id = COALESCE(?, kelas_id) WHERE id = ?`
     ).run(nama_kelompok, nama_produk, cabang_id, kelas_id, c.req.param("id"));
+    logAdmin(c, "Ubah kelompok projek", nama_kelompok);
     return c.json({ ok: true });
   } catch {
     return bad(c, "Nama kelompok sudah ada di kelas ini");
@@ -236,6 +253,7 @@ sec("put", "/kelompok/:id", async (c) => {
 
 sec("delete", "/kelompok/:id", (c) => {
   const db = getDb();
+  const kelRow = db.query("SELECT nama_kelompok FROM kelompok WHERE id = ?").get(c.req.param("id")) as { nama_kelompok: string } | null;
   const fotos = db.query("SELECT filename FROM foto WHERE kelompok_id = ?").all(c.req.param("id")) as {
     filename: string;
   }[];
@@ -249,6 +267,7 @@ sec("delete", "/kelompok/:id", (c) => {
       unlinkSync(join(getDataDir(), "uploads", f.filename));
     } catch {}
   }
+  logAdmin(c, "Hapus kelompok projek", kelRow ? kelRow.nama_kelompok : `id ${c.req.param("id")}`);
   return c.json({ ok: true });
 });
 
@@ -259,7 +278,7 @@ sec("put", "/kelompok/:id/siswa", async (c) => {
   if (names.length < 1) return bad(c, "Minimal 1 nama murid");
   if (names.length > 12) return bad(c, "Maksimal 12 murid per kelompok");
   const db = getDb();
-  const kel = db.query("SELECT id FROM kelompok WHERE id = ?").get(c.req.param("id"));
+  const kel = db.query("SELECT id, nama_kelompok FROM kelompok WHERE id = ?").get(c.req.param("id")) as { id: number; nama_kelompok: string } | null;
   if (!kel) return bad(c, "Kelompok tidak ditemukan", 404);
   const del = db.query("DELETE FROM siswa WHERE kelompok_id = ?");
   const ins = db.query("INSERT INTO siswa (kelompok_id, nama, urutan) VALUES (?, ?, ?)");
@@ -268,6 +287,7 @@ sec("put", "/kelompok/:id/siswa", async (c) => {
     list.forEach((n, i) => ins.run(c.req.param("id"), n, i + 1));
   });
   tx(names);
+  logAdmin(c, "Ubah daftar murid kelompok projek", `${kel.nama_kelompok} • ${names.length} murid`);
   return c.json({ ok: true, jumlah: names.length });
 });
 
@@ -340,6 +360,7 @@ sec("post", "/kelompok/import", async (c) => {
   } catch (e: any) {
     return bad(c, "Gagal impor: " + e.message);
   }
+  logAdmin(c, "Impor CSV kelompok projek", `${okCount} kelompok diimpor${errors.length ? `, ${errors.length} peringatan` : ""}`);
   return c.json({ ok: true, diimpor: okCount, peringatan: errors });
 });
 
@@ -366,6 +387,7 @@ sec("post", "/juri", async (c) => {
   try {
     const hash = await Bun.password.hash(pin);
     const r = getDb().query("INSERT INTO juri (kode, nama, pin_hash, keterangan) VALUES (?, ?, ?, ?)").run(kode, nama, hash, keterangan);
+    logAdmin(c, "Tambah penilai", `${kode} — ${nama}`);
     return c.json({ ok: true, id: Number(r.lastInsertRowid) });
   } catch {
     return bad(c, "Kode penilai sudah dipakai");
@@ -379,17 +401,22 @@ sec("put", "/juri/:id", async (c) => {
   const pin = String(b.pin || "");
   if (!nama) return bad(c, "Nama penilai wajib diisi");
   const db = getDb();
+  const jRow = db.query("SELECT kode FROM juri WHERE id = ?").get(c.req.param("id")) as { kode: string } | null;
   db.query("UPDATE juri SET nama = ?, keterangan = ? WHERE id = ?").run(nama, keterangan, c.req.param("id"));
   if (pin) {
     if (!/^[0-9]{4,8}$/.test(pin)) return bad(c, "PIN harus 4–8 digit angka");
     const hash = await Bun.password.hash(pin);
     db.query("UPDATE juri SET pin_hash = ? WHERE id = ?").run(hash, c.req.param("id"));
   }
+  logAdmin(c, "Ubah penilai", `${jRow ? jRow.kode + " — " : ""}${nama}${pin ? " (PIN diganti)" : ""}`);
   return c.json({ ok: true });
 });
 
 sec("delete", "/juri/:id", (c) => {
-  getDb().query("DELETE FROM juri WHERE id = ?").run(c.req.param("id"));
+  const db = getDb();
+  const row = db.query("SELECT kode, nama FROM juri WHERE id = ?").get(c.req.param("id")) as { kode: string; nama: string } | null;
+  db.query("DELETE FROM juri WHERE id = ?").run(c.req.param("id"));
+  logAdmin(c, "Hapus penilai", row ? `${row.kode} — ${row.nama}` : `id ${c.req.param("id")}`);
   return c.json({ ok: true });
 });
 
@@ -420,7 +447,46 @@ sec("put", "/kriteria/:id", async (c) => {
   getDb()
     .query("UPDATE kriteria SET nama = ?, deskripsi = ?, skor_min = ?, skor_max = ?, skor_default = ? WHERE id = ?")
     .run(nama, deskripsi, min, max, def, c.req.param("id"));
+  logAdmin(c, "Ubah kriteria projek", `${nama} (${min}–${max})`);
   return c.json({ ok: true });
+});
+
+// ---------------------------------------------------------------- log aktivitas
+// Daftar log terbaru untuk menu "Log" di halaman admin.
+// Query: ?limit= (default 200, maks 500) &q= (cari aktor/aksi/detail) &peran=admin|penilai
+sec("get", "/log", (c) => {
+  const db = getDb();
+  const limit = Math.max(1, Math.min(500, Number(c.req.query("limit")) || 200));
+  const q = (c.req.query("q") || "").trim();
+  const peran = (c.req.query("peran") || "").trim();
+  const where: string[] = [];
+  const params: any[] = [];
+  if (q) {
+    where.push("(aktor LIKE ? OR aksi LIKE ? OR detail LIKE ?)");
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+  }
+  if (peran === "admin" || peran === "penilai") {
+    where.push("peran = ?");
+    params.push(peran);
+  }
+  const sql =
+    "SELECT id, aktor, peran, aksi, detail, ip, created_at FROM aktivitas_log" +
+    (where.length ? " WHERE " + where.join(" AND ") : "") +
+    " ORDER BY id DESC LIMIT ?";
+  const rows = db.query(sql).all(...params, limit);
+  const total = (db.query("SELECT COUNT(*) AS n FROM aktivitas_log").get() as { n: number }).n;
+  return c.json({ log: rows, total });
+});
+
+// Bersihkan log lama secara manual (pilihan admin). Batas aman: minimal 30 hari,
+// mengikuti pola Log Aktivitas GezyRaport agar jejak audit tidak mudah hilang.
+sec("delete", "/log/lama", (c) => {
+  const hari = Math.floor(Number(c.req.query("hari")) || 0);
+  if (!Number.isFinite(hari) || hari < 30) return bad(c, "Penghapusan log lama minimal 30 hari");
+  const db = getDb();
+  const r = db.query("DELETE FROM aktivitas_log WHERE created_at < datetime('now', ?)").run(`-${hari} days`);
+  logAdmin(c, "Bersihkan log lama", `${r.changes} log lebih dari ${hari} hari dihapus`);
+  return c.json({ ok: true, terhapus: r.changes });
 });
 
 export default admin;

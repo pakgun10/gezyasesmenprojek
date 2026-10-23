@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { getDb, getDataDir } from "./db";
 import { requireJudge, judgeLoginHandler, judgeLogoutHandler } from "./judge";
-import { requireAuth } from "./auth";
+import { requireAuth, clientIp } from "./auth";
+import { logAktivitas, aktorAdmin, aktorPenilai } from "./log";
 import { join, extname } from "node:path";
 import { mkdirSync, writeFileSync, unlinkSync, statSync } from "node:fs";
 import { randomBytes } from "node:crypto";
@@ -99,14 +100,16 @@ scoring.post("/juri/nilai", requireJudge, async (c) => {
   if (!Number.isFinite(skor) || skor < 0 || skor > 100) return c.json({ error: "Skor harus 0–100" }, 400);
   if (skor < kri.skor_min || skor > kri.skor_max)
     return c.json({ error: `Skor harus dalam rentang kriteria (${kri.skor_min}–${kri.skor_max})` }, 400);
-  const kel = db.query("SELECT id FROM kelompok WHERE id = ?").get(kelompok_id);
+  const kel = db.query("SELECT id, nama_kelompok FROM kelompok WHERE id = ?").get(kelompok_id) as { id: number; nama_kelompok: string } | null;
   if (!kel) return c.json({ error: "Kelompok tidak ditemukan" }, 404);
+  const kat = db.query("SELECT nama FROM kategori WHERE id = ?").get(kategori_id) as { nama: string } | null;
   db.query(
     `INSERT INTO penilaian (kelompok_id, juri_id, kategori_id, kriteria_id, skor, updated_at)
      VALUES (?, ?, ?, ?, ?, datetime('now'))
      ON CONFLICT(kelompok_id, juri_id, kategori_id)
      DO UPDATE SET kriteria_id = excluded.kriteria_id, skor = excluded.skor, updated_at = datetime('now')`
   ).run(kelompok_id, juri.id, kategori_id, kriteria_id, skor);
+  logAktivitas(aktorPenilai(c), "penilai", "Simpan nilai projek", `${kel.nama_kelompok} • ${kat ? kat.nama : "kategori " + kategori_id} • skor ${skor}`, clientIp(c));
   return c.json({ ok: true });
 });
 
@@ -135,6 +138,8 @@ scoring.post("/juri/foto", requireJudge, async (c) => {
   const r = db
     .query("INSERT INTO foto (kelompok_id, juri_id, filename, mime, size, caption) VALUES (?, ?, ?, ?, ?, ?)")
     .run(kelompok_id, juri.id, filename, file.type, file.size, caption);
+  const kelF = db.query("SELECT nama_kelompok FROM kelompok WHERE id = ?").get(kelompok_id) as { nama_kelompok: string } | null;
+  logAktivitas(aktorPenilai(c), "penilai", "Upload foto projek", kelF ? kelF.nama_kelompok : `kelompok id ${kelompok_id}`, clientIp(c));
   return c.json({ ok: true, id: Number(r.lastInsertRowid), filename });
 });
 
@@ -147,6 +152,7 @@ scoring.delete("/juri/foto/:id", requireJudge, (c) => {
   try {
     unlinkSync(join(getDataDir(), "uploads", f.filename));
   } catch {}
+  logAktivitas(aktorPenilai(c), "penilai", "Hapus foto projek", `foto id ${f.id}`, clientIp(c));
   return c.json({ ok: true });
 });
 
@@ -279,6 +285,7 @@ scoring.get("/hasil/export.csv", requireAuth, (c) => {
     );
   }
   const csv = "\uFEFF" + lines.join("\r\n");
+  logAktivitas(aktorAdmin(c), "admin", "Ekspor CSV hasil projek", `Kelas ${h.kelas.nama}`, clientIp(c));
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
@@ -320,6 +327,8 @@ scoring.put("/berita-acara", requireAuth, async (c) => {
        dibuat_nama = excluded.dibuat_nama, updated_at = datetime('now')`
   ).run(kelas_id, fields.nomor, fields.tempat, fields.tanggal, fields.mengetahui_nama,
     fields.mengetahui_nip, fields.mengetahui_jabatan, fields.dibuat_nama);
+  const kelB = db.query("SELECT nama FROM kelas WHERE id = ?").get(kelas_id) as { nama: string } | null;
+  logAktivitas(aktorAdmin(c), "admin", "Simpan berita acara projek", kelB ? `Kelas ${kelB.nama}` : `kelas id ${kelas_id}`, clientIp(c));
   return c.json({ ok: true });
 });
 
