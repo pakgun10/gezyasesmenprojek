@@ -28,6 +28,21 @@ body {
 }
 .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
 
+/* ---------- watermark logo sekolah (semua halaman) ---------- */
+body::before {
+  content: "";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 23vw;
+  aspect-ratio: 640 / 636;
+  transform: translate(-50%, -50%);
+  background: url("../img/logo-sekolah.webp") center center / contain no-repeat;
+  opacity: 0.33;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* ---------- topbar ---------- */
 .topbar {
   background: linear-gradient(135deg, var(--navy), var(--navy-2));
@@ -277,5 +292,6 @@ details.box summary { cursor: pointer; font-weight: 700; color: var(--navy); }
   .no-print { display: none !important; }
   #print-area { display: block !important; }
   body { background: #fff; }
+  body::before { display: none; }
   @page { margin: 18mm 15mm; }
 }
