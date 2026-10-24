@@ -465,6 +465,21 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
             </table></div>
             <p class="muted small">Anda tidak bisa menghapus akun sendiri, dan admin terakhir tidak bisa dihapus.</p>
           </div>
+
+          <div class="card">
+            <h3>💾 Backup &amp; Restore Data</h3>
+            <p class="muted small">Backup mengunduh <b>satu berkas JSON</b> berisi seluruh data aplikasi — kelas, murid, kelompok, cabang, kriteria, penilai, nilai projek &amp; senam, berita acara, akun, log aktivitas — <b>termasuk berkas foto</b> (terkode di dalam berkas). Simpan berkas ini di tempat aman; bila aplikasi dipasang dari kosong, berkas ini bisa dipulihkan lewat tombol Restore di bawah.</p>
+            <div class="actions">
+              <button type="button" class="btn btn-primary" id="btn-backup-unduh">⬇️ Unduh Backup</button>
+            </div>
+            <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+            <p class="muted small"><b>Restore mengganti SELURUH data saat ini</b> dengan isi berkas backup — data yang ada sekarang akan hilang. Unduh backup data saat ini dulu bila masih diperlukan. Setelah restore berhasil, Anda harus <b>login ulang</b> dengan kata sandi dari berkas backup.</p>
+            <div class="form-group"><label for="backup-file">Pilih berkas backup (.json)</label><input type="file" id="backup-file" accept=".json,application/json"></div>
+            <div id="backup-info" class="small" style="margin-bottom:10px"></div>
+            <div class="actions">
+              <button type="button" class="btn btn-gold" id="btn-backup-restore">♻️ Restore dari Backup</button>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -473,7 +488,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
   <!-- Area cetak: hanya tampil saat print -->
   <div id="print-area"><div class="ba-doc" id="ba-doc"></div></div>
 
-  <script src="js/admin.js?v=20261024a"></script>
+  <script src="js/admin.js?v=20261024b"></script>
   <script src="js/common.js?v=20261023b"></script>
 </body>
 </html>

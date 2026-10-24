@@ -38,6 +38,10 @@ Berbasis web (HP & laptop), data tersimpan di database SQLite.
 - **Log Aktivitas**: mencatat login/logout, login gagal, serta aktivitas admin dan penilai
   pada projek dan senam; tersedia di menu admin dengan pencarian, filter peran, dan
   penghapusan log yang berusia minimal 30 hari. Data tersimpan di tabel `aktivitas_log`.
+- **Backup & Restore Data** (menu Akun): unduh satu berkas JSON berisi seluruh data
+  (semua tabel + berkas foto terkode base64 di dalamnya) dan pulihkan kembali berkas itu
+  — termasuk ke instalasi yang masih kosong. Restore mengganti seluruh data saat ini dan
+  mengakhiri semua sesi login (route `/api/backup`, `/api/backup/restore`).
 - **Footer global dan tampilan responsif**: identitas aplikasi disuntik ke semua halaman
   melalui `common.js` dan disembunyikan saat mencetak.
 
@@ -53,6 +57,7 @@ src/
   log.ts      # pencatatan Log Aktivitas admin dan penilai
   admin.ts    # CRUD kelas/cabang/kelompok/siswa/penilai/kriteria + impor CSV + log
   murid.ts    # master data Murid (route /api/murid/*, ceklis & validasi anggota bersama)
+  backup.ts   # Backup & Restore seluruh data (route /api/backup*)
   scoring.ts  # penilaian penilai, upload foto, hasil/peringkat, CSV, berita acara
   senam.ts    # modul Asesmen Senam (route /api/senam/*, tabel senam_*)
 public/       # frontend vanilla (index, admin, projek, senam, common.js)

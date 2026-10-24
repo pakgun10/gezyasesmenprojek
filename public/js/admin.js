@@ -1465,6 +1465,70 @@
     } catch (e) { handleErr(e); }
   });
 
+  // ---------- BACKUP & RESTORE ----------
+  var backupTerpilih = null; // objek backup hasil parse berkas yang dipilih
+
+  function ringkasanBackup(b) {
+    var total = 0;
+    Object.keys(b.tabel || {}).forEach(function (k) { total += (b.tabel[k] || []).length; });
+    return "Berkas backup: dibuat " + esc(b.dibuat_pada || "?") + " • " + total + " baris data • " +
+      Object.keys(b.berkas || {}).length + " berkas foto.";
+  }
+
+  $("btn-backup-unduh").addEventListener("click", async function () {
+    var btn = $("btn-backup-unduh");
+    btn.disabled = true; btn.textContent = "Menyiapkan…";
+    try {
+      var r = await fetch("/api/backup", { credentials: "same-origin" });
+      if (r.status === 401) { toLogin(); showAlert("Sesi berakhir. Silakan login lagi."); return; }
+      if (!r.ok) throw new Error("Gagal membuat backup (HTTP " + r.status + ")");
+      var blob = await r.blob();
+      var cd = r.headers.get("Content-Disposition") || "";
+      var m = cd.match(/filename="([^"]+)"/);
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = m ? m[1] : "backup-gezyaspro.json";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      showAlert("Backup terunduh. Simpan berkasnya di tempat aman.", "success");
+    } catch (e) { handleErr(e); }
+    finally { btn.disabled = false; btn.textContent = "⬇️ Unduh Backup"; }
+  });
+
+  $("backup-file").addEventListener("change", async function () {
+    backupTerpilih = null;
+    $("backup-info").innerHTML = "";
+    var f = $("backup-file").files[0];
+    if (!f) return;
+    try {
+      var teks = await f.text();
+      var b = JSON.parse(teks);
+      if (!b || b.app !== "gezyaspro-backup" || !b.tabel) throw new Error("bukan berkas backup GezyAspro");
+      backupTerpilih = b;
+      $("backup-info").innerHTML = "✅ " + ringkasanBackup(b);
+    } catch (e) {
+      $("backup-info").innerHTML = "❌ Berkas tidak bisa dibaca: " + esc(e.message);
+    }
+  });
+
+  $("btn-backup-restore").addEventListener("click", async function () {
+    if (!backupTerpilih) { showAlert("Pilih berkas backup yang valid dulu."); return; }
+    if (!confirm("Restore akan MENGGANTI SELURUH data saat ini dengan isi backup (" + (backupTerpilih.dibuat_pada || "?") + "). Data sekarang akan hilang. Lanjutkan?")) return;
+    if (!confirm("Sekali lagi untuk memastikan: restore sekarang? Setelah ini Anda harus login ulang dengan kata sandi dari berkas backup.")) return;
+    var btn = $("btn-backup-restore");
+    btn.disabled = true; btn.textContent = "Memulihkan…";
+    try {
+      var r = await apiJson("/api/backup/restore", "POST", backupTerpilih);
+      alert("Restore berhasil: " + r.total_baris + " baris data dan " + r.jumlah_berkas + " berkas foto dipulihkan. Silakan login ulang.");
+      backupTerpilih = null;
+      $("backup-file").value = "";
+      $("backup-info").innerHTML = "";
+      toLogin();
+    } catch (e) { handleErr(e); }
+    finally { btn.disabled = false; btn.textContent = "♻️ Restore dari Backup"; }
+  });
+
   // ---------- start ----------
   boot();
 })();
