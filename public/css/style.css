@@ -237,6 +237,14 @@ table.data tr.total-belum td { color: var(--muted); }
 .tab-panel.active { display: block; }
 .siswa-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
 .siswa-row input { flex: 1; }
+/* Ceklis murid (panel Kelola Siswa / Anggota — data dari menu Murid) */
+.cek-list { max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px; margin-bottom: 10px; background: #fff; }
+.cek-item { display: flex; gap: 10px; align-items: center; padding: 7px 4px; border-bottom: 1px solid #f0f2f5; cursor: pointer; }
+.cek-item:last-child { border-bottom: none; }
+.cek-item input[type="checkbox"] { width: 18px; height: 18px; flex: none; }
+.cek-item .cek-nama { flex: 1; }
+.cek-item.cek-terpakai { opacity: .55; cursor: not-allowed; }
+.cek-item.cek-sembunyi { display: none; }
 pre.contoh {
   background: #0f2237; color: #d7e7ff; border-radius: 9px; padding: 12px;
   overflow-x: auto; font-size: 0.82rem; line-height: 1.6;

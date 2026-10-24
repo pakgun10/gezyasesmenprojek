@@ -4,6 +4,10 @@
 
   var loaded = {};
   var state = { hasilData: null, hasilKelasId: null, hasilKelasNama: "", siswaKelompokId: null };
+  // Halaman Kelas 8 / Kelas 9 memakai panel projek yang sama; yang berbeda
+  // hanya saringan tingkatnya (projekSemua = saringan dimatikan sementara).
+  var projekTingkat = null;
+  var projekSemua = false;
 
   // Cache daftar cabang produk (GET /api/cabang)
   async function ensureCabang(force) {
@@ -108,21 +112,43 @@
     document.querySelectorAll("#tabs .tab-btn").forEach(function (b) {
       b.classList.toggle("active", b.getAttribute("data-tab") === name);
     });
+    var panelId = (name === "kelas8" || name === "kelas9") ? "kelas89" : name;
     document.querySelectorAll(".tab-panel").forEach(function (p) {
-      p.classList.toggle("active", p.id === "tab-" + name);
+      p.classList.toggle("active", p.id === "tab-" + panelId);
     });
     showAlert(null);
     if (name === "dasbor") loadDasbor();
     else if (name === "kelas") loadKelasTab();
-    else if (name === "cabang") loadCabangTab();
-    else if (name === "kelompok") loadKelompokTab();
+    else if (name === "kelas8" || name === "kelas9") {
+      projekTingkat = name === "kelas8" ? "8" : "9";
+      projekSemua = false;
+      perbaruiJudulProjek();
+      loadKelompokTab();
+      loadCabangTab();
+      loadKriteriaTab();
+      // hasil projek dimuat manual via tombol di panelnya
+    }
+    else if (name === "murid") loadMuridTab();
     else if (name === "juri") loadJuriTab();
-    else if (name === "kriteria") loadKriteriaTab();
     else if (name === "senam") loadSenamTab();
     else if (name === "log") loadLogTab();
     else if (name === "akun") loadAkunTab();
-    // tab hasil dimuat manual via tombol
   }
+
+  function perbaruiJudulProjek() {
+    var ikon = projekTingkat === "9" ? "🚀" : "💡";
+    var label = projekSemua ? "Semua Tingkat" : "Kelas " + projekTingkat;
+    $("projek-judul").textContent = ikon + " Penilaian Projek — " + label;
+    $("projek-tingkat-label").textContent = projekSemua ? "semua tingkat (saringan dimatikan)" : "Kelas " + projekTingkat;
+    $("btn-projek-semua").textContent = projekSemua ? "↩️ Kembali ke Kelas " + projekTingkat + " saja" : "👀 Tampilkan semua tingkat";
+  }
+
+  $("btn-projek-semua").addEventListener("click", function () {
+    projekSemua = !projekSemua;
+    perbaruiJudulProjek();
+    fillKelasSelects();
+    loadKelompokTable();
+  });
 
   document.querySelectorAll("#tabs .tab-btn").forEach(function (b) {
     b.addEventListener("click", function () { switchTab(b.getAttribute("data-tab")); });
@@ -225,17 +251,33 @@
 
   function fillKelasSelects() {
     var list = window.__kelasCache || [];
-    var opts = list.map(function (k) { return '<option value="' + k.id + '">' + esc(k.nama) + "</option>"; }).join("");
-    $("flt-kelas").innerHTML = '<option value="">Semua kelas</option>' + opts;
-    $("kelompok-kelas").innerHTML = opts || '<option value="">(belum ada kelas)</option>';
+    function opsi(dft) {
+      return dft.map(function (k) { return '<option value="' + k.id + '">' + esc(k.nama) + "</option>"; }).join("");
+    }
+    var opts = opsi(list);
+    // Dropdown panel projek (Kelas 8/9) tersaring tingkat aktif; selebihnya semua.
+    var listProjek = (projekTingkat && !projekSemua) ? list.filter(function (k) { return String(k.tingkat) === projekTingkat; }) : list;
+    var optsProjek = opsi(listProjek);
+    var labelSemua = projekTingkat && !projekSemua ? "Semua kelas tingkat " + projekTingkat : "Semua kelas";
+    var curF = $("flt-kelas").value;
+    $("flt-kelas").innerHTML = '<option value="">' + labelSemua + "</option>" + optsProjek;
+    if (curF && listProjek.some(function (k) { return String(k.id) === curF; })) $("flt-kelas").value = curF;
+    $("kelompok-kelas").innerHTML = optsProjek || '<option value="">(belum ada kelas tingkat ini)</option>';
     var cur = $("hasil-kelas").value;
-    $("hasil-kelas").innerHTML = '<option value="">— pilih —</option>' + opts;
-    if (cur) $("hasil-kelas").value = cur;
-    // dropdown modul senam
+    $("hasil-kelas").innerHTML = '<option value="">— pilih —</option>' + optsProjek;
+    if (cur && listProjek.some(function (k) { return String(k.id) === cur; })) $("hasil-kelas").value = cur;
+    // dropdown modul senam (Kelas 7) — tampil semua tingkat, tidak dikunci
     $("senam-kelompok-kelas").innerHTML = opts || '<option value="">(belum ada kelas)</option>';
     var curS = $("senam-hasil-kelas").value;
     $("senam-hasil-kelas").innerHTML = '<option value="">— pilih —</option>' + opts;
     if (curS) $("senam-hasil-kelas").value = curS;
+    // dropdown menu Murid
+    var curM = $("murid-kelas").value;
+    $("murid-kelas").innerHTML = opts || '<option value="">(belum ada kelas)</option>';
+    if (curM) $("murid-kelas").value = curM;
+    var curMF = $("murid-flt-kelas").value;
+    $("murid-flt-kelas").innerHTML = '<option value="">Semua kelas</option>' + opts;
+    if (curMF) $("murid-flt-kelas").value = curMF;
   }
 
   // ---------- CABANG PRODUK ----------
@@ -340,6 +382,9 @@
     try {
       var d = await apiJson(url);
       var list = d.kelompok || [];
+      if (projekTingkat && !projekSemua && !kelasId) {
+        list = list.filter(function (g) { return String(g.tingkat) === projekTingkat; });
+      }
       $("kelompok-count").textContent = "(" + list.length + " kelompok)";
       tb.innerHTML = list.map(function (g) {
         return "<tr><td><b>" + esc(g.nama_kelompok) + "</b></td>" +
@@ -417,72 +462,98 @@
   });
   $("kelompok-batal").addEventListener("click", resetKelompokForm);
 
-  // ----- kelola siswa -----
+  // ----- ceklis murid (dipakai panel siswa projek & anggota senam) -----
+  // Pilihan datang dari GET /api/murid/pilihan — hanya murid terdaftar di
+  // menu Murid pada rombel kelompok itu. Tidak ada ketik nama bebas.
+  function renderCeklis(prefix, pilihan) {
+    var box = $(prefix + "-rows");
+    box.innerHTML = "";
+    if (!pilihan.length) {
+      box.innerHTML = '<div class="muted small" style="padding:8px 4px">Belum ada murid terdaftar untuk rombel ini. Tambahkan dulu lewat menu 🎒 Murid.</div>';
+    }
+    pilihan.forEach(function (m) {
+      var lab = document.createElement("label");
+      lab.className = "cek-item" + (m.status === "kelompok_lain" ? " cek-terpakai" : "");
+      lab.setAttribute("data-nama", (m.nama || "").toLowerCase());
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = m.id;
+      cb.checked = m.status === "kelompok_ini";
+      cb.disabled = m.status === "kelompok_lain";
+      cb.addEventListener("change", function () { perbaruiHitungCeklis(prefix, cb); });
+      var nm = document.createElement("span");
+      nm.className = "cek-nama";
+      nm.textContent = m.nama;
+      lab.appendChild(cb);
+      lab.appendChild(nm);
+      if (m.nis) {
+        var nis = document.createElement("span");
+        nis.className = "badge badge-blue";
+        nis.textContent = "NIS " + m.nis;
+        lab.appendChild(nis);
+      }
+      if (m.status === "kelompok_lain") {
+        var dipakai = document.createElement("span");
+        dipakai.className = "muted small";
+        dipakai.textContent = "sudah di " + (m.kelompok_nama || "kelompok lain");
+        lab.appendChild(dipakai);
+      }
+      box.appendChild(lab);
+    });
+    perbaruiHitungCeklis(prefix, null);
+    var cari = $(prefix + "-cari");
+    cari.value = "";
+    cari.oninput = function () {
+      var q = cari.value.trim().toLowerCase();
+      box.querySelectorAll(".cek-item").forEach(function (it) {
+        it.classList.toggle("cek-sembunyi", !!q && it.getAttribute("data-nama").indexOf(q) < 0);
+      });
+    };
+  }
+
+  function perbaruiHitungCeklis(prefix, cbBaru) {
+    var box = $(prefix + "-rows");
+    var tercentang = box.querySelectorAll('input[type="checkbox"]:checked');
+    if (cbBaru && cbBaru.checked && tercentang.length > 12) {
+      cbBaru.checked = false;
+      showAlert("Maksimal 12 murid per kelompok.");
+      tercentang = box.querySelectorAll('input[type="checkbox"]:checked');
+    }
+    $(prefix + "-terpilih").textContent = tercentang.length;
+  }
+
+  function ambilCeklisIds(prefix) {
+    var ids = [];
+    $(prefix + "-rows").querySelectorAll('input[type="checkbox"]:checked').forEach(function (cb) {
+      ids.push(Number(cb.value));
+    });
+    return ids;
+  }
+
+  // ----- kelola siswa (projek) -----
   async function bukaSiswaPanel(id) {
     try {
-      var d = await apiJson("/api/kelompok/" + id);
+      var d = await apiJson("/api/murid/pilihan?modul=projek&kelompok_id=" + id);
       state.siswaKelompokId = id;
-      $("siswa-kelompok-nama").textContent = d.kelompok.nama_kelompok + " (Kelas " + d.kelompok.kelas_nama + ")";
-      var names = (d.siswa || []).map(function (s) { return s.nama; });
-      renderSiswaRows(names.length ? names : [""]);
+      var det = await apiJson("/api/kelompok/" + id);
+      $("siswa-kelompok-nama").textContent = det.kelompok.nama_kelompok + " (Kelas " + det.kelompok.kelas_nama + ")";
+      renderCeklis("siswa", d.pilihan || []);
       $("siswa-panel").classList.remove("hidden");
       $("siswa-panel").scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (e) { handleErr(e); }
   }
 
-  function renderSiswaRows(names) {
-    var box = $("siswa-rows");
-    box.innerHTML = "";
-    names.forEach(function (n) { tambahBarisSiswa(n); });
-  }
-
-  function tambahBarisSiswa(nama) {
-    var box = $("siswa-rows");
-    if (box.querySelectorAll(".siswa-row").length >= 12) { showAlert("Maksimal 12 murid per kelompok."); return; }
-    var div = document.createElement("div");
-    div.className = "siswa-row";
-    var inp = document.createElement("input");
-    inp.type = "text";
-    inp.placeholder = "Nama murid";
-    inp.value = nama || "";
-    inp.maxLength = 100;
-    var del = document.createElement("button");
-    del.type = "button";
-    del.className = "btn btn-danger btn-sm";
-    del.textContent = "×";
-    del.title = "Hapus baris";
-    del.addEventListener("click", function () { div.remove(); renumberSiswa(); });
-    var num = document.createElement("span");
-    num.className = "muted small siswa-num";
-    num.style.minWidth = "28px";
-    div.appendChild(num);
-    div.appendChild(inp);
-    div.appendChild(del);
-    box.appendChild(div);
-    renumberSiswa();
-  }
-
-  function renumberSiswa() {
-    $("siswa-rows").querySelectorAll(".siswa-row").forEach(function (row, i) {
-      row.querySelector(".siswa-num").textContent = (i + 1) + ".";
-    });
-  }
-
-  $("btn-siswa-tambah").addEventListener("click", function () { tambahBarisSiswa(""); });
   $("btn-siswa-tutup").addEventListener("click", function () {
     $("siswa-panel").classList.add("hidden");
     state.siswaKelompokId = null;
   });
+  $("btn-ke-murid").addEventListener("click", function () { switchTab("murid"); });
   $("btn-siswa-simpan").addEventListener("click", async function () {
-    var names = [];
-    $("siswa-rows").querySelectorAll("input").forEach(function (inp) {
-      var v = inp.value.trim();
-      if (v) names.push(v);
-    });
-    if (names.length < 4) { showAlert("Minimal 4 murid per kelompok (terisi: " + names.length + ")."); return; }
-    if (names.length > 12) { showAlert("Maksimal 12 murid per kelompok."); return; }
+    var ids = ambilCeklisIds("siswa");
+    if (ids.length < 4) { showAlert("Minimal 4 murid per kelompok (tercentang: " + ids.length + ")."); return; }
+    if (ids.length > 12) { showAlert("Maksimal 12 murid per kelompok."); return; }
     try {
-      var r = await apiJson("/api/kelompok/" + state.siswaKelompokId + "/siswa", "PUT", { names: names });
+      var r = await apiJson("/api/kelompok/" + state.siswaKelompokId + "/siswa", "PUT", { murid_ids: ids });
       showAlert("Daftar siswa disimpan (" + r.jumlah + " murid).", "success");
       loadKelompokTable();
     } catch (e) { handleErr(e); }
@@ -513,6 +584,129 @@
       box.innerHTML = '<div class="alert alert-error">❌ ' + esc(e.message) + "</div>";
     } finally {
       btn.disabled = false; btn.textContent = "⬆️ Impor";
+    }
+  });
+
+  // ---------- MURID (master data) ----------
+  function resetMuridForm() {
+    $("murid-id").value = "";
+    $("murid-nama").value = "";
+    $("murid-nis").value = "";
+    $("murid-form-title").textContent = "Tambah Murid";
+    $("murid-submit").textContent = "Tambah";
+    $("murid-batal").classList.add("hidden");
+  }
+
+  async function loadMuridTab() {
+    resetMuridForm();
+    try {
+      if (!window.__kelasCache) {
+        var d = await apiJson("/api/kelas");
+        window.__kelasCache = d.kelas || [];
+      }
+      fillKelasSelects();
+    } catch (e) { handleErr(e); return; }
+    loadMuridTable();
+  }
+
+  async function loadMuridTable() {
+    var tb = $("tbl-murid").querySelector("tbody");
+    tb.innerHTML = loadingRow(6, "Memuat murid…");
+    var kelasId = $("murid-flt-kelas").value;
+    var q = $("murid-q").value.trim();
+    var url = "/api/murid?" + (kelasId ? "kelas_id=" + encodeURIComponent(kelasId) + "&" : "") + "q=" + encodeURIComponent(q);
+    try {
+      var d = await apiJson(url);
+      var list = d.murid || [];
+      $("murid-count").textContent = "(" + list.length + " murid)";
+      tb.innerHTML = list.map(function (m) {
+        return "<tr><td><b>" + esc(m.nama) + "</b></td>" +
+          "<td>" + esc(m.kelas_nama) + "</td>" +
+          "<td>" + esc(m.nis || "-") + "</td>" +
+          "<td>" + (m.kelompok_projek ? '<span class="badge badge-blue">' + esc(m.kelompok_projek) + "</span>" : '<span class="muted">—</span>') + "</td>" +
+          "<td>" + (m.kelompok_senam ? '<span class="badge badge-blue">' + esc(m.kelompok_senam) + "</span>" : '<span class="muted">—</span>') + "</td>" +
+          '<td style="white-space:nowrap"><button type="button" class="btn btn-ghost btn-sm" data-medit="' + m.id + '">✏️</button> ' +
+          '<button type="button" class="btn btn-danger btn-sm" data-mdel="' + m.id + '">🗑️</button></td></tr>';
+      }).join("") || '<tr><td colspan="6" class="muted">Belum ada murid. Tambahkan lewat form di atas atau impor CSV.</td></tr>';
+      tb.querySelectorAll("[data-medit]").forEach(function (b) {
+        b.addEventListener("click", function () { editMurid(Number(b.getAttribute("data-medit"))); });
+      });
+      tb.querySelectorAll("[data-mdel]").forEach(function (b) {
+        b.addEventListener("click", function () { hapusMurid(Number(b.getAttribute("data-mdel"))); });
+      });
+      window.__muridCache = list;
+    } catch (e) { handleErr(e); }
+  }
+
+  function editMurid(id) {
+    var m = (window.__muridCache || []).find(function (x) { return x.id === id; });
+    if (!m) return;
+    $("murid-id").value = m.id;
+    $("murid-kelas").value = m.kelas_id;
+    $("murid-nama").value = m.nama;
+    $("murid-nis").value = m.nis || "";
+    $("murid-form-title").textContent = "Ubah Murid";
+    $("murid-submit").textContent = "💾 Simpan";
+    $("murid-batal").classList.remove("hidden");
+    window.scrollTo(0, 0);
+  }
+
+  async function hapusMurid(id) {
+    var m = (window.__muridCache || []).find(function (x) { return x.id === id; });
+    if (!confirm("Hapus murid \"" + (m ? m.nama : id) + "\" dari daftar induk?")) return;
+    try {
+      await apiJson("/api/murid/" + id, "DELETE");
+      showAlert("Murid dihapus.", "success");
+      loadMuridTable();
+    } catch (e) { handleErr(e); }
+  }
+
+  $("form-murid").addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    var id = $("murid-id").value;
+    var body = {
+      kelas_id: Number($("murid-kelas").value),
+      nama: $("murid-nama").value.trim(),
+      nis: $("murid-nis").value.trim()
+    };
+    if (!body.kelas_id) { showAlert("Pilih kelas dulu (tambahkan kelas di menu Kelas bila belum ada)."); return; }
+    try {
+      if (id) await apiJson("/api/murid/" + id, "PUT", body);
+      else await apiJson("/api/murid", "POST", body);
+      showAlert(id ? "Murid diperbarui." : "Murid ditambahkan.", "success");
+      resetMuridForm();
+      loadMuridTable();
+    } catch (e) { handleErr(e); }
+  });
+  $("murid-batal").addEventListener("click", resetMuridForm);
+  $("btn-murid-cari").addEventListener("click", loadMuridTable);
+  $("murid-flt-kelas").addEventListener("change", loadMuridTable);
+  var muridCariT = null;
+  $("murid-q").addEventListener("input", function () {
+    clearTimeout(muridCariT);
+    muridCariT = setTimeout(loadMuridTable, 500);
+  });
+
+  $("btn-murid-import").addEventListener("click", async function () {
+    var csv = $("murid-csv-text").value;
+    var box = $("murid-import-hasil");
+    box.innerHTML = "";
+    if (!csv.trim()) { showAlert("Tempel isi CSV murid dulu."); return; }
+    var btn = $("btn-murid-import");
+    btn.disabled = true; btn.textContent = "Mengimpor…";
+    try {
+      var r = await apiJson("/api/murid/import", "POST", { csv: csv });
+      var html = '<div class="alert alert-success">✅ Berhasil diimpor: <b>' + esc(r.diimpor) + "</b> murid.</div>";
+      if ((r.peringatan || []).length) {
+        html += '<div class="alert alert-info">⚠️ Dilewati:<br>' + r.peringatan.map(function (p) { return "• " + esc(p); }).join("<br>") + "</div>";
+      }
+      box.innerHTML = html;
+      $("murid-csv-text").value = "";
+      loadMuridTable();
+    } catch (e) {
+      box.innerHTML = '<div class="alert alert-error">❌ ' + esc(e.message) + "</div>";
+    } finally {
+      btn.disabled = false; btn.textContent = "⬆️ Impor Murid";
     }
   });
 
@@ -912,72 +1106,30 @@
   });
   $("senam-kelompok-batal").addEventListener("click", resetSenamKelompokForm);
 
-  // ----- kelola anggota senam -----
+  // ----- kelola anggota senam (ceklis dari menu Murid, pola sama projek) -----
   async function bukaSenamAnggotaPanel(id) {
     try {
-      var d = await apiJson("/api/senam/kelompok/" + id);
+      var d = await apiJson("/api/murid/pilihan?modul=senam&kelompok_id=" + id);
       senamState.anggotaKelompokId = id;
-      $("senam-anggota-kelompok-nama").textContent = d.kelompok.nama_kelompok + " (Kelas " + d.kelompok.kelas_nama + ")";
-      var names = (d.anggota || []).map(function (s) { return s.nama; });
-      renderSenamAnggotaRows(names.length ? names : [""]);
+      var det = await apiJson("/api/senam/kelompok/" + id);
+      $("senam-anggota-kelompok-nama").textContent = det.kelompok.nama_kelompok + " (Kelas " + det.kelompok.kelas_nama + ")";
+      renderCeklis("senam-anggota", d.pilihan || []);
       $("senam-anggota-panel").classList.remove("hidden");
       $("senam-anggota-panel").scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (e) { handleErr(e); }
   }
 
-  function renderSenamAnggotaRows(names) {
-    var box = $("senam-anggota-rows");
-    box.innerHTML = "";
-    names.forEach(function (n) { tambahBarisSenamAnggota(n); });
-  }
-
-  function tambahBarisSenamAnggota(nama) {
-    var box = $("senam-anggota-rows");
-    if (box.querySelectorAll(".siswa-row").length >= 12) { showAlert("Maksimal 12 murid per kelompok."); return; }
-    var div = document.createElement("div");
-    div.className = "siswa-row";
-    var inp = document.createElement("input");
-    inp.type = "text";
-    inp.placeholder = "Nama murid";
-    inp.value = nama || "";
-    inp.maxLength = 100;
-    var del = document.createElement("button");
-    del.type = "button";
-    del.className = "btn btn-danger btn-sm";
-    del.textContent = "×";
-    del.title = "Hapus baris";
-    del.addEventListener("click", function () { div.remove(); renumberSenamAnggota(); });
-    var num = document.createElement("span");
-    num.className = "muted small siswa-num";
-    num.style.minWidth = "28px";
-    div.appendChild(num);
-    div.appendChild(inp);
-    div.appendChild(del);
-    box.appendChild(div);
-    renumberSenamAnggota();
-  }
-
-  function renumberSenamAnggota() {
-    $("senam-anggota-rows").querySelectorAll(".siswa-row").forEach(function (row, i) {
-      row.querySelector(".siswa-num").textContent = (i + 1) + ".";
-    });
-  }
-
-  $("btn-senam-anggota-tambah").addEventListener("click", function () { tambahBarisSenamAnggota(""); });
   $("btn-senam-anggota-tutup").addEventListener("click", function () {
     $("senam-anggota-panel").classList.add("hidden");
     senamState.anggotaKelompokId = null;
   });
+  $("btn-senam-ke-murid").addEventListener("click", function () { switchTab("murid"); });
   $("btn-senam-anggota-simpan").addEventListener("click", async function () {
-    var names = [];
-    $("senam-anggota-rows").querySelectorAll("input").forEach(function (inp) {
-      var v = inp.value.trim();
-      if (v) names.push(v);
-    });
-    if (names.length < 4) { showAlert("Minimal 4 murid per kelompok senam (terisi: " + names.length + ")."); return; }
-    if (names.length > 12) { showAlert("Maksimal 12 murid per kelompok senam."); return; }
+    var ids = ambilCeklisIds("senam-anggota");
+    if (ids.length < 4) { showAlert("Minimal 4 murid per kelompok senam (tercentang: " + ids.length + ")."); return; }
+    if (ids.length > 12) { showAlert("Maksimal 12 murid per kelompok senam."); return; }
     try {
-      var r = await apiJson("/api/senam/kelompok/" + senamState.anggotaKelompokId + "/anggota", "PUT", { names: names });
+      var r = await apiJson("/api/senam/kelompok/" + senamState.anggotaKelompokId + "/anggota", "PUT", { murid_ids: ids });
       showAlert("Daftar anggota disimpan (" + r.jumlah + " murid).", "success");
       loadSenamKelompokTable();
     } catch (e) { handleErr(e); }

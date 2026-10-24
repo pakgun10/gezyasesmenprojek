@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Penilaian Projek — Admin</title>
-  <link rel="stylesheet" href="css/style.css?v=20261023b">
+  <link rel="stylesheet" href="css/style.css?v=20261024a">
 </head>
 <body>
   <div class="no-print">
@@ -42,13 +42,12 @@
       <section id="view-app" class="hidden">
         <nav class="tabs" id="tabs">
           <button type="button" class="tab-btn active" data-tab="dasbor">📊 Dasbor</button>
+          <button type="button" class="tab-btn" data-tab="senam">🤸 Kelas 7</button>
+          <button type="button" class="tab-btn" data-tab="kelas8">💡 Kelas 8</button>
+          <button type="button" class="tab-btn" data-tab="kelas9">🚀 Kelas 9</button>
           <button type="button" class="tab-btn" data-tab="kelas">🏫 Kelas</button>
-          <button type="button" class="tab-btn" data-tab="cabang">🌿 Cabang Produk</button>
-          <button type="button" class="tab-btn" data-tab="kelompok">👥 Kelompok</button>
+          <button type="button" class="tab-btn" data-tab="murid">🎒 Murid</button>
           <button type="button" class="tab-btn" data-tab="juri">🧑‍⚖️ Penilai</button>
-          <button type="button" class="tab-btn" data-tab="kriteria">🎯 Kriteria</button>
-          <button type="button" class="tab-btn" data-tab="hasil">🏆 Hasil</button>
-          <button type="button" class="tab-btn" data-tab="senam">🤸 Senam</button>
           <button type="button" class="tab-btn" data-tab="log">📜 Log</button>
           <button type="button" class="tab-btn" data-tab="akun">🔐 Akun</button>
         </nav>
@@ -92,34 +91,18 @@
           </div>
         </div>
 
-        <!-- CABANG PRODUK -->
-        <div class="tab-panel" id="tab-cabang">
+        <!-- KELAS 8 & 9 (panel projek dipakai ulang, tersaring per tingkat) -->
+        <div class="tab-panel" id="tab-kelas89">
           <div class="card">
-            <h3 id="cabang-form-title">Tambah Cabang Produk</h3>
-            <form id="form-cabang">
-              <input type="hidden" id="cabang-id">
-              <div class="form-row">
-                <div class="form-group"><label for="cabang-nama">Nama cabang</label><input type="text" id="cabang-nama" placeholder="cth: Olahan Minuman" required></div>
-                <div class="form-group"><label for="cabang-deskripsi">Deskripsi <span class="hint">(opsional)</span></label><input type="text" id="cabang-deskripsi" placeholder="cth: Minuman berbahan dasar nanas"></div>
-              </div>
-              <div class="actions">
-                <button type="submit" class="btn btn-primary" id="cabang-submit">Tambah</button>
-                <button type="button" class="btn btn-ghost hidden" id="cabang-batal">Batal</button>
-              </div>
-            </form>
-            <p class="muted small">Kode cabang dibuat otomatis dari nama. Cabang yang masih dipakai oleh kelompok tidak dapat dihapus.</p>
+            <h3 id="projek-judul">💡 Penilaian Projek — Kelas 8</h3>
+            <p class="muted small">Kelompok, hasil, dan berita acara di halaman ini tersaring untuk <b id="projek-tingkat-label">Kelas 8</b>. Cabang Produk dan Kriteria di bawah bersifat <b>bersama</b> — berlaku untuk Kelas 8 dan 9 sekaligus; mengubahnya di sini ikut mengubah halaman satunya.</p>
+            <div class="actions" style="margin-top:8px">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-projek-semua">👀 Tampilkan semua tingkat</button>
+            </div>
           </div>
-          <div class="card">
-            <h3>Daftar Cabang Produk</h3>
-            <div class="table-wrap"><table class="data" id="tbl-cabang">
-              <thead><tr><th>Nama</th><th>Kode</th><th>Deskripsi</th><th>Aksi</th></tr></thead>
-              <tbody></tbody>
-            </table></div>
-          </div>
-        </div>
 
         <!-- KELOMPOK -->
-        <div class="tab-panel" id="tab-kelompok">
+        <div class="sub-panel" id="tab-kelompok">
           <div class="card">
             <div class="form-row">
               <div class="form-group"><label for="flt-kelas">Filter kelas</label><select id="flt-kelas"><option value="">Semua kelas</option></select></div>
@@ -147,20 +130,22 @@
             </form>
           </div>
 
-          <div class="card hidden" id="siswa-panel">
+                    <div class="card hidden" id="siswa-panel">
             <h3>Kelola Siswa — <span id="siswa-kelompok-nama"></span></h3>
-            <p class="muted small">Tambah / hapus baris nama. Idealnya 4–10 murid (maks. 12).</p>
-            <div id="siswa-rows"></div>
+            <p class="muted small">Centang murid dari daftar resmi menu Murid untuk rombel kelompok ini. Idealnya 4–10 murid (maks. 12). Nama yang belum ada di daftar harus ditambahkan dulu di menu 🎒 Murid — tidak bisa diketik bebas, supaya tidak ada salah eja.</p>
+            <div class="form-group"><label for="siswa-cari">Cari nama</label><input type="text" id="siswa-cari" placeholder="ketik untuk menyaring daftar…"></div>
+            <div id="siswa-rows" class="cek-list"></div>
+            <p class="small">Terpilih: <b id="siswa-terpilih">0</b> murid</p>
             <div class="actions">
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-siswa-tambah">＋ Tambah baris</button>
               <button type="button" class="btn btn-primary btn-sm" id="btn-siswa-simpan">💾 Simpan daftar siswa</button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-siswa-tutup">Tutup</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-ke-murid">🎒 Buka menu Murid</button>
             </div>
           </div>
 
           <details class="box" id="import-box">
             <summary>📥 Impor CSV massal</summary>
-            <p class="small muted">Format: <code>nama_kelompok,kelas,tingkat,cabang,nama_produk,murid</code> — nama murid dipisah titik-koma. Kolom <code>cabang</code> berisi <b>nama</b> cabang (mis. "Olahan Minuman"); bila belum ada, cabang otomatis dibuat. Baris pertama boleh header.</p>
+            <p class="small muted">Format: <code>nama_kelompok,kelas,tingkat,cabang,nama_produk,murid</code> — nama murid dipisah titik-koma. <b>Syarat ketat:</b> kelas harus sudah terdaftar di menu Kelas, dan setiap nama murid harus sudah terdaftar di menu 🎒 Murid pada kelas itu (ejaan sama persis) serta belum masuk kelompok lain — baris yang melanggar dilewati seluruhnya dan dilaporkan. Kolom <code>cabang</code> berisi <b>nama</b> cabang (mis. "Olahan Minuman"); bila belum ada, cabang otomatis dibuat. Baris pertama boleh header.</p>
             <pre class="contoh">nama_kelompok,kelas,tingkat,cabang,nama_produk,murid
 Kelompok 1,7A,7,Olahan Nanas,Dodol Nanas,Andi;Budi;Citra;Dewi;Eka
 Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
@@ -178,43 +163,40 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
           </div>
         </div>
 
-        <!-- JURI -->
-        <div class="tab-panel" id="tab-juri">
+        <!-- CABANG PRODUK -->
+        <div class="sub-panel" id="tab-cabang">
           <div class="card">
-            <h3 id="juri-form-title">Tambah Penilai</h3>
-            <form id="form-juri">
-              <input type="hidden" id="juri-id">
+            <h3 id="cabang-form-title">Tambah Cabang Produk</h3>
+            <form id="form-cabang">
+              <input type="hidden" id="cabang-id">
               <div class="form-row">
-                <div class="form-group"><label for="juri-kode">Kode penilai</label><input type="text" id="juri-kode" placeholder="cth: JURI1" required></div>
-                <div class="form-group"><label for="juri-nama">Nama penilai</label><input type="text" id="juri-nama" placeholder="Nama lengkap" required></div>
-              </div>
-              <div class="form-row">
-                <div class="form-group"><label for="juri-pin">PIN <span class="hint">(4–8 digit angka; kosongkan = tidak diubah saat edit)</span></label><input type="password" id="juri-pin" inputmode="numeric" placeholder="cth: 1234"></div>
-                <div class="form-group"><label for="juri-ket">Keterangan</label><input type="text" id="juri-ket" placeholder="cth: Guru Prakarya"></div>
+                <div class="form-group"><label for="cabang-nama">Nama cabang</label><input type="text" id="cabang-nama" placeholder="cth: Olahan Minuman" required></div>
+                <div class="form-group"><label for="cabang-deskripsi">Deskripsi <span class="hint">(opsional)</span></label><input type="text" id="cabang-deskripsi" placeholder="cth: Minuman berbahan dasar nanas"></div>
               </div>
               <div class="actions">
-                <button type="submit" class="btn btn-primary" id="juri-submit">Tambah</button>
-                <button type="button" class="btn btn-ghost hidden" id="juri-batal">Batal</button>
+                <button type="submit" class="btn btn-primary" id="cabang-submit">Tambah</button>
+                <button type="button" class="btn btn-ghost hidden" id="cabang-batal">Batal</button>
               </div>
             </form>
+            <p class="muted small">Kode cabang dibuat otomatis dari nama. Cabang yang masih dipakai oleh kelompok tidak dapat dihapus.</p>
           </div>
           <div class="card">
-            <h3>Daftar Penilai</h3>
-            <div class="table-wrap"><table class="data" id="tbl-juri">
-              <thead><tr><th>Kode</th><th>Nama</th><th>Keterangan</th><th class="num">Kelompok dinilai</th><th>Aksi</th></tr></thead>
+            <h3>Daftar Cabang Produk</h3>
+            <div class="table-wrap"><table class="data" id="tbl-cabang">
+              <thead><tr><th>Nama</th><th>Kode</th><th>Deskripsi</th><th>Aksi</th></tr></thead>
               <tbody></tbody>
             </table></div>
           </div>
         </div>
 
         <!-- KRITERIA -->
-        <div class="tab-panel" id="tab-kriteria">
+        <div class="sub-panel" id="tab-kriteria">
           <p class="muted small">Ubah nama, deskripsi, dan rentang skor tiap kriteria. Perubahan berlaku untuk penilaian berikutnya.</p>
           <div id="kriteria-list"></div>
         </div>
 
         <!-- HASIL -->
-        <div class="tab-panel" id="tab-hasil">
+        <div class="sub-panel" id="tab-hasil">
           <div class="card">
             <div class="form-row">
               <div class="form-group"><label for="hasil-kelas">Pilih kelas</label><select id="hasil-kelas"><option value="">— pilih —</option></select></div>
@@ -251,9 +233,88 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
           </div>
         </div>
 
+        </div>
+
+        <!-- MURID (master data — dipakai bersama Kelas 7/8/9) -->
+        <div class="tab-panel" id="tab-murid">
+          <p class="muted small">Daftar induk murid per rombel. Anggota kelompok Kelas 7 (senam) dan Kelas 8/9 (projek) hanya bisa dipilih dari daftar ini, dan impor CSV kelompok hanya menerima nama yang terdaftar di sini — supaya tidak ada salah ketik nama murid.</p>
+          <div class="card">
+            <h3 id="murid-form-title">Tambah Murid</h3>
+            <form id="form-murid">
+              <input type="hidden" id="murid-id">
+              <div class="form-row">
+                <div class="form-group"><label for="murid-kelas">Kelas / rombel</label><select id="murid-kelas" required></select></div>
+                <div class="form-group"><label for="murid-nama">Nama murid</label><input type="text" id="murid-nama" placeholder="Nama lengkap sesuai daftar resmi" required></div>
+                <div class="form-group"><label for="murid-nis">NIS <span class="hint">(opsional — pembeda nama kembar)</span></label><input type="text" id="murid-nis" placeholder="cth: 12345"></div>
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary" id="murid-submit">Tambah</button>
+                <button type="button" class="btn btn-ghost hidden" id="murid-batal">Batal</button>
+              </div>
+            </form>
+          </div>
+
+          <details class="box" id="murid-import-box">
+            <summary>📥 Impor CSV murid massal</summary>
+            <p class="small muted">Format: <code>kelas,nama,nis</code> — NIS boleh dikosongkan. Kelas harus <b>sudah terdaftar</b> di menu Kelas. Nama yang sudah terdaftar di kelas yang sama dilewati dan dilaporkan. Baris pertama boleh header.</p>
+            <pre class="contoh">kelas,nama,nis
+7.1,Andi Pratama,10101
+7.1,Budi Santoso,10102
+8.2,Citra Lestari,</pre>
+            <div class="form-group"><label for="murid-csv-text">Tempel CSV di sini</label><textarea id="murid-csv-text" rows="6"></textarea></div>
+            <button type="button" class="btn btn-primary" id="btn-murid-import">⬆️ Impor Murid</button>
+            <div id="murid-import-hasil" class="small" style="margin-top:10px"></div>
+          </details>
+
+          <div class="card">
+            <div class="form-row">
+              <div class="form-group"><label for="murid-flt-kelas">Filter kelas</label><select id="murid-flt-kelas"><option value="">Semua kelas</option></select></div>
+              <div class="form-group"><label for="murid-q">Cari nama</label><input type="text" id="murid-q" placeholder="ketik nama murid…"></div>
+              <div class="form-group"><label>&nbsp;</label><button type="button" class="btn btn-primary" id="btn-murid-cari">🔍 Cari</button></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Daftar Murid <span class="muted small" id="murid-count"></span></h3>
+            <div class="table-wrap"><table class="data" id="tbl-murid">
+              <thead><tr><th>Nama</th><th>Kelas</th><th>NIS</th><th>Kelompok Projek</th><th>Kelompok Senam</th><th>Aksi</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- JURI -->
+        <div class="tab-panel" id="tab-juri">
+          <div class="card">
+            <h3 id="juri-form-title">Tambah Penilai</h3>
+            <form id="form-juri">
+              <input type="hidden" id="juri-id">
+              <div class="form-row">
+                <div class="form-group"><label for="juri-kode">Kode penilai</label><input type="text" id="juri-kode" placeholder="cth: JURI1" required></div>
+                <div class="form-group"><label for="juri-nama">Nama penilai</label><input type="text" id="juri-nama" placeholder="Nama lengkap" required></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label for="juri-pin">PIN <span class="hint">(4–8 digit angka; kosongkan = tidak diubah saat edit)</span></label><input type="password" id="juri-pin" inputmode="numeric" placeholder="cth: 1234"></div>
+                <div class="form-group"><label for="juri-ket">Keterangan</label><input type="text" id="juri-ket" placeholder="cth: Guru Prakarya"></div>
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary" id="juri-submit">Tambah</button>
+                <button type="button" class="btn btn-ghost hidden" id="juri-batal">Batal</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Daftar Penilai</h3>
+            <div class="table-wrap"><table class="data" id="tbl-juri">
+              <thead><tr><th>Kode</th><th>Nama</th><th>Keterangan</th><th class="num">Kelompok dinilai</th><th>Aksi</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+          </div>
+        </div>
+
         <!-- SENAM -->
         <div class="tab-panel" id="tab-senam">
-          <p class="muted small">Modul Asesmen Performa Senam Berkelompok — terpisah dari Penilaian Projek (data, kriteria, dan hasil sendiri). Kelas dan akun penilai dipakai bersama.</p>
+          <p class="muted small">Kelas 7 — Modul Asesmen Performa Senam Berkelompok, terpisah dari Penilaian Projek (data, kriteria, dan hasil sendiri). Kelas, data murid, dan akun penilai dipakai bersama.</p>
 
           <div class="card">
             <h3 id="senam-kelompok-form-title">Tambah Kelompok Senam</h3>
@@ -273,12 +334,14 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
 
           <div class="card hidden" id="senam-anggota-panel">
             <h3>Kelola Anggota — <span id="senam-anggota-kelompok-nama"></span></h3>
-            <p class="muted small">Tambah / hapus baris nama. Kelompok senam idealnya 4–12 murid (maks. 12).</p>
-            <div id="senam-anggota-rows"></div>
+            <p class="muted small">Centang murid dari daftar resmi menu Murid untuk rombel kelompok ini. Idealnya 4–12 murid (maks. 12). Nama yang belum ada di daftar harus ditambahkan dulu di menu 🎒 Murid — tidak bisa diketik bebas, supaya tidak ada salah eja.</p>
+            <div class="form-group"><label for="senam-anggota-cari">Cari nama</label><input type="text" id="senam-anggota-cari" placeholder="ketik untuk menyaring daftar…"></div>
+            <div id="senam-anggota-rows" class="cek-list"></div>
+            <p class="small">Terpilih: <b id="senam-anggota-terpilih">0</b> murid</p>
             <div class="actions">
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-senam-anggota-tambah">＋ Tambah baris</button>
               <button type="button" class="btn btn-primary btn-sm" id="btn-senam-anggota-simpan">💾 Simpan daftar anggota</button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-senam-anggota-tutup">Tutup</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-senam-ke-murid">🎒 Buka menu Murid</button>
             </div>
           </div>
 
@@ -410,7 +473,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
   <!-- Area cetak: hanya tampil saat print -->
   <div id="print-area"><div class="ba-doc" id="ba-doc"></div></div>
 
-  <script src="js/admin.js?v=20261023d"></script>
+  <script src="js/admin.js?v=20261024a"></script>
   <script src="js/common.js?v=20261023b"></script>
 </body>
 </html>

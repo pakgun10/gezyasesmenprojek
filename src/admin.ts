@@ -1,7 +1,8 @@
 import { Hono } from "hono";
-import { getDb } from "./db";
+import { getDb, normalisasiNama } from "./db";
 import { requireAuth, clientIp } from "./auth";
 import { logAktivitas, aktorAdmin } from "./log";
+import { validasiPilihanMurid, parseBarisCsv } from "./murid";
 
 const admin = new Hono();
 // requireAuth dipasang per-route (bukan admin.use("*")) agar tidak bocor
@@ -202,7 +203,10 @@ sec("get", "/kelompok/:id", (c) => {
     .get(c.req.param("id"));
   if (!kel) return bad(c, "Kelompok tidak ditemukan", 404);
   const siswa = db
-    .query("SELECT id, nama, urutan FROM siswa WHERE kelompok_id = ? ORDER BY urutan, id")
+    .query(
+      `SELECT s.id, COALESCE(m.nama, s.nama) AS nama, s.urutan, s.murid_id FROM siswa s
+       LEFT JOIN murid m ON m.id = s.murid_id WHERE s.kelompok_id = ? ORDER BY s.urutan, s.id`
+    )
     .all(c.req.param("id"));
   return c.json({ kelompok: kel, siswa });
 });
@@ -239,6 +243,14 @@ sec("put", "/kelompok/:id", async (c) => {
   const db = getDb();
   if (cabang_id && !db.query("SELECT id FROM cabang_produk WHERE id = ?").get(cabang_id))
     return bad(c, "Cabang produk tidak dikenal");
+  if (kelas_id) {
+    const lama = db.query("SELECT kelas_id FROM kelompok WHERE id = ?").get(c.req.param("id")) as { kelas_id: number } | null;
+    if (lama && lama.kelas_id !== kelas_id) {
+      const terkait = (db.query("SELECT COUNT(*) n FROM siswa WHERE kelompok_id = ? AND murid_id IS NOT NULL").get(c.req.param("id")) as { n: number }).n;
+      if (terkait > 0)
+        return bad(c, "Kelompok ini sudah punya murid dari menu Murid rombel lama — kosongkan dulu daftar muridnya sebelum memindah rombel");
+    }
+  }
   try {
     db.query(
       `UPDATE kelompok SET nama_kelompok = ?, nama_produk = ?,
@@ -271,29 +283,38 @@ sec("delete", "/kelompok/:id", (c) => {
   return c.json({ ok: true });
 });
 
-// Ganti seluruh daftar siswa satu kelompok (dipakai form dinamis 4–10 murid)
+// Ganti seluruh daftar siswa satu kelompok. Sejak master Murid (2026-10-24)
+// daftar dikirim sebagai murid_ids hasil ceklis dari menu Murid — nama bebas
+// (names) tidak lagi diterima, agar tidak ada salah ketik nama murid.
 sec("put", "/kelompok/:id/siswa", async (c) => {
   const b = await c.req.json().catch(() => ({}));
-  const names: string[] = Array.isArray(b.names) ? b.names.map((n: any) => String(n).trim()).filter(Boolean) : [];
-  if (names.length < 1) return bad(c, "Minimal 1 nama murid");
-  if (names.length > 12) return bad(c, "Maksimal 12 murid per kelompok");
   const db = getDb();
-  const kel = db.query("SELECT id, nama_kelompok FROM kelompok WHERE id = ?").get(c.req.param("id")) as { id: number; nama_kelompok: string } | null;
+  const kel = db.query("SELECT id, nama_kelompok, kelas_id FROM kelompok WHERE id = ?").get(c.req.param("id")) as { id: number; nama_kelompok: string; kelas_id: number } | null;
   if (!kel) return bad(c, "Kelompok tidak ditemukan", 404);
+  const v = validasiPilihanMurid("projek", kel.id, kel.kelas_id, b.murid_ids);
+  if ("error" in v) return bad(c, v.error);
   const del = db.query("DELETE FROM siswa WHERE kelompok_id = ?");
-  const ins = db.query("INSERT INTO siswa (kelompok_id, nama, urutan) VALUES (?, ?, ?)");
-  const tx = db.transaction((list: string[]) => {
-    del.run(c.req.param("id"));
-    list.forEach((n, i) => ins.run(c.req.param("id"), n, i + 1));
+  const ins = db.query("INSERT INTO siswa (kelompok_id, nama, murid_id, urutan) VALUES (?, ?, ?, ?)");
+  const tx = db.transaction((list: { id: number; nama: string }[]) => {
+    del.run(kel.id);
+    list.forEach((m, i) => ins.run(kel.id, m.nama, m.id, i + 1));
   });
-  tx(names);
-  logAdmin(c, "Ubah daftar murid kelompok projek", `${kel.nama_kelompok} • ${names.length} murid`);
-  return c.json({ ok: true, jumlah: names.length });
+  tx(v.murid);
+  logAdmin(c, "Ubah daftar murid kelompok projek", `${kel.nama_kelompok} • ${v.murid.length} murid`);
+  return c.json({ ok: true, jumlah: v.murid.length });
 });
 
 // Impor CSV massal: nama_kelompok,kelas,tingkat,cabang,nama_produk,murid
 // murid dipisah titik-koma; cabang = NAMA cabang (dibuat otomatis bila belum ada).
-// Baris pertama boleh header.
+// Sejak master Murid (2026-10-24) impor menjadi KETAT:
+// - kelas harus SUDAH terdaftar di menu Kelas (tidak lagi dibuat otomatis,
+//   karena murid menempel ke rombel yang terdaftar);
+// - setiap nama murid harus cocok dengan menu Murid pada rombel baris itu
+//   (ejaan persis setelah normalisasi spasi & huruf besar/kecil) dan belum
+//   masuk kelompok projek lain;
+// - baris yang gagal SATU nama saja dilewati SELURUHNYA (tanpa efek samping:
+//   kelompok/cabang tidak dibuat) dan dilaporkan di peringatan.
+// Nama yang tersimpan selalu ejaan resmi dari menu Murid.
 sec("post", "/kelompok/import", async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const csv = String(b.csv || "");
@@ -303,13 +324,17 @@ sec("post", "/kelompok/import", async (c) => {
   let start = 0;
   if (/nama_kelompok/i.test(lines[0])) start = 1;
   const getKelas = db.query("SELECT id FROM kelas WHERE nama = ?");
-  const insKelas = db.query("INSERT INTO kelas (nama, tingkat) VALUES (?, ?)");
   const getCabang = db.query("SELECT id FROM cabang_produk WHERE nama = ?");
   const insKel = db.query(
     "INSERT OR IGNORE INTO kelompok (kelas_id, nama_kelompok, cabang_id, nama_produk) VALUES (?, ?, ?, ?)"
   );
   const getKel = db.query("SELECT id FROM kelompok WHERE kelas_id = ? AND nama_kelompok = ?");
-  const insSiswa = db.query("INSERT INTO siswa (kelompok_id, nama, urutan) VALUES (?, ?, ?)");
+  const insSiswa = db.query("INSERT INTO siswa (kelompok_id, nama, murid_id, urutan) VALUES (?, ?, ?, ?)");
+  const cariMurid = db.query("SELECT id, nama FROM murid WHERE kelas_id = ? AND nama_norm = ?");
+  const kelompokMurid = db.query(
+    `SELECT s.kelompok_id, kel.nama_kelompok FROM siswa s
+     JOIN kelompok kel ON kel.id = s.kelompok_id WHERE s.murid_id = ?`
+  );
   const getOrCreateCabang = (namaCabang: string): number => {
     const n = namaCabang.trim() || "Olahan Nanas";
     const ada = getCabang.get(n) as { id: number } | null;
@@ -322,36 +347,61 @@ sec("post", "/kelompok/import", async (c) => {
   let okCount = 0;
   const errors: string[] = [];
   const tx = db.transaction((rows: string[][]) => {
-    for (const cols of rows) {
-      const [namaKelompok, kelasNama, tingkat, cabangNama, namaProduk, muridRaw] = cols.map((x) => (x || "").trim());
+    rows.forEach((cols, ri) => {
+      const [namaKelompok, kelasNama, , cabangNama, namaProduk, muridRaw] = cols.map((x) => (x || "").trim());
+      const label = `Baris ${ri + 1 + start} (${namaKelompok || "?"} / ${kelasNama || "?"})`;
       if (!namaKelompok || !kelasNama) {
-        errors.push(`Baris dilewati (nama kelompok/kelas kosong): ${cols.join(",")}`);
-        continue;
+        errors.push(`${label} dilewati (nama kelompok/kelas kosong)`);
+        return;
       }
-      let kelas = getKelas.get(kelasNama) as { id: number } | null;
-      if (!kelas) kelas = { id: Number(insKelas.run(kelasNama, tingkat || "").lastInsertRowid) };
+      const kelas = getKelas.get(kelasNama) as { id: number } | null;
+      if (!kelas) {
+        errors.push(`${label} dilewati: kelas "${kelasNama}" belum terdaftar di menu Kelas`);
+        return;
+      }
+      // --- validasi murid dulu: baris gagal tidak menimbulkan efek apa pun
+      const namaMentah = (muridRaw || "").split(";").map((m) => m.trim()).filter(Boolean).slice(0, 12);
+      if (!namaMentah.length) {
+        errors.push(`${label} dilewati: kolom murid kosong`);
+        return;
+      }
+      const kelAda = getKel.get(kelas.id, namaKelompok) as { id: number } | null;
+      const muridValid: { id: number; nama: string }[] = [];
+      const sudahDiBaris = new Set<number>();
+      let gagal: string | null = null;
+      for (const nm of namaMentah) {
+        const cocok = cariMurid.all(kelas.id, normalisasiNama(nm)) as { id: number; nama: string }[];
+        if (!cocok.length) { gagal = `murid "${nm}" tidak terdaftar di menu Murid kelas ${kelasNama}`; break; }
+        if (cocok.length > 1) { gagal = `murid "${nm}" kembar di menu Murid kelas ${kelasNama} — tetapkan lewat ceklis manual (NIS pembeda)`; break; }
+        const m = cocok[0];
+        if (sudahDiBaris.has(m.id)) continue;
+        sudahDiBaris.add(m.id);
+        const dipakai = kelompokMurid.get(m.id) as { kelompok_id: number; nama_kelompok: string } | null;
+        if (dipakai && (!kelAda || dipakai.kelompok_id !== kelAda.id)) {
+          gagal = `murid "${m.nama}" sudah masuk ${dipakai.nama_kelompok}`;
+          break;
+        }
+        muridValid.push(m);
+      }
+      if (gagal) { errors.push(`${label} dilewati: ${gagal}`); return; }
+      // --- semua valid: buat kelompok (bila belum ada) + isi muridnya
       const cabangId = getOrCreateCabang(cabangNama);
       insKel.run(kelas.id, namaKelompok, cabangId, namaProduk || "");
       const kel = getKel.get(kelas.id, namaKelompok) as { id: number };
-      const murid = (muridRaw || "").split(";").map((m) => m.trim()).filter(Boolean).slice(0, 12);
-      murid.forEach((m, i) => insSiswa.run(kel.id, m, i + 1));
+      const sudahAda = new Set(
+        (db.query("SELECT murid_id FROM siswa WHERE kelompok_id = ?").all(kel.id) as { murid_id: number }[]).map((r) => r.murid_id)
+      );
+      let urutan = sudahAda.size;
+      for (const m of muridValid) {
+        if (sudahAda.has(m.id)) continue;
+        insSiswa.run(kel.id, m.nama, m.id, ++urutan);
+      }
       okCount++;
-    }
+    });
   });
-  // Parse CSV sederhana (dukung tanda kutip)
   const rows: string[][] = [];
   for (let i = start; i < lines.length; i++) {
-    const cols: string[] = [];
-    let cur = "";
-    let inQ = false;
-    for (const ch of lines[i]) {
-      if (ch === '"') inQ = !inQ;
-      else if (ch === "," && !inQ) {
-        cols.push(cur);
-        cur = "";
-      } else cur += ch;
-    }
-    cols.push(cur);
+    const cols = parseBarisCsv(lines[i]);
     while (cols.length < 6) cols.push("");
     rows.push(cols.slice(0, 6));
   }

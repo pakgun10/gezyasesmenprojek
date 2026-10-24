@@ -70,7 +70,10 @@ scoring.get("/juri/kelompok/:id", requireJudge, (c) => {
     .get(c.req.param("id")) as any;
   if (!kel) return c.json({ error: "Kelompok tidak ditemukan" }, 404);
   kel.siswa = db
-    .query("SELECT nama FROM siswa WHERE kelompok_id = ? ORDER BY urutan, id")
+    .query(
+      `SELECT COALESCE(m.nama, s.nama) AS nama FROM siswa s
+       LEFT JOIN murid m ON m.id = s.murid_id WHERE s.kelompok_id = ? ORDER BY s.urutan, s.id`
+    )
     .all(kel.id);
   kel.nilai_saya = db
     .query(

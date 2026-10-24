@@ -10,9 +10,16 @@ Berbasis web (HP & laptop), data tersimpan di database SQLite.
 ## Fitur
 
 - **Data master**: kelas, cabang produk (dinamis — bisa tambah: olahan nanas, makanan ringan,
-  olahan minuman, dll.), kelompok (nama kelompok + 4–10 nama murid), penilai (kode + PIN).
+  olahan minuman, dll.), **murid** (daftar induk per rombel — anggota kelompok hanya bisa
+  dipilih dari daftar ini), kelompok (nama kelompok + 4–10 nama murid), penilai (kode + PIN).
+- **Panel admin per tingkat**: Kelas 7 (asesmen senam), Kelas 8 & Kelas 9 (penilaian projek
+  tersaring per tingkat, panel projek yang sama dipakai ulang; cabang produk & kriteria
+  projek berlaku bersama untuk 8 dan 9).
 - **Impor CSV massal** untuk 150 kelompok sekaligus
   (format: `nama_kelompok,kelas,tingkat,cabang,nama_produk,murid` — murid dipisah `;`).
+  Impor bersifat **ketat**: kelas harus sudah terdaftar dan setiap nama murid harus cocok
+  dengan data induk Murid pada rombel itu — baris yang melanggar dilewati dan dilaporkan.
+  Murid sendiri bisa diimpor massal (format: `kelas,nama,nis`; NIS opsional).
 - **Kriteria per kategori** (kreativitas, penalaran kritis, kolaborasi, kualitas produk —
   selaras Dimensi Profil Lulusan): tiap kategori punya
   4 kriteria dengan rentang skor 0–100; penilai memilih kriteria lalu mengisi skor
@@ -45,6 +52,7 @@ src/
   judge.ts    # login penilai (kode + PIN)
   log.ts      # pencatatan Log Aktivitas admin dan penilai
   admin.ts    # CRUD kelas/cabang/kelompok/siswa/penilai/kriteria + impor CSV + log
+  murid.ts    # master data Murid (route /api/murid/*, ceklis & validasi anggota bersama)
   scoring.ts  # penilaian penilai, upload foto, hasil/peringkat, CSV, berita acara
   senam.ts    # modul Asesmen Senam (route /api/senam/*, tabel senam_*)
 public/       # frontend vanilla (index, admin, projek, senam, common.js)

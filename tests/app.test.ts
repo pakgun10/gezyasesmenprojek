@@ -116,8 +116,18 @@ describe("kelas & kelompok", () => {
     );
     expect(res.status).toBe(200);
     const kelId = (await res.json()).id;
+    // siswa sekarang dipilih dari master Murid (murid_ids), bukan nama bebas
+    const muridIds: number[] = [];
+    for (const nama of ["Andi", "Budi", "Citra", "Dewi"]) {
+      const mr = await app.request("/api/murid", {
+        ...json({ kelas_id: k7b, nama }),
+        headers: { cookie, "Content-Type": "application/json" },
+      });
+      expect(mr.status).toBe(200);
+      muridIds.push((await mr.json()).id);
+    }
     res = await app.request(`/api/kelompok/${kelId}/siswa`, {
-      ...json({ names: ["Andi", "Budi", "Citra", "Dewi"] }),
+      ...json({ murid_ids: muridIds }),
       method: "PUT",
       headers: { cookie, "Content-Type": "application/json" },
     });
@@ -135,12 +145,23 @@ describe("kelas & kelompok", () => {
     expect(res.status).toBe(400);
   });
 
-  test("impor CSV massal (cabang otomatis dibuat bila baru)", async () => {
+  test("impor CSV massal (cabang otomatis dibuat bila baru; murid harus terdaftar di menu Murid)", async () => {
+    // kelas + murid harus terdaftar lebih dulu (impor kelompok kini ketat)
+    let res = await app.request("/api/kelas", { ...json({ nama: "8A", tingkat: "8" }), headers: { cookie, "Content-Type": "application/json" } });
+    expect(res.status).toBe(200);
+    const k8a = (await res.json()).id;
+    for (const nama of ["Ani", "Budi", "Caca", "Dodi", "Eka", "Fajar", "Gita", "Hadi", "Ira", "Joko", "Kiki"]) {
+      const mr = await app.request("/api/murid", {
+        ...json({ kelas_id: k8a, nama }),
+        headers: { cookie, "Content-Type": "application/json" },
+      });
+      expect(mr.status).toBe(200);
+    }
     const csv = `nama_kelompok,kelas,tingkat,cabang,nama_produk,murid
 Kelompok 1,8A,8,Olahan Nanas,Selai Nanas,Ani;Budi;Caca;Dodi
 Kelompok 2,8A,8,Makanan Ringan,Salad Buah,Eka;Fajar;Gita;Hadi;Ira
 Kelompok 3,8A,8,Olahan Minuman,Es Nanas,Joko;Kiki`;
-    const res = await app.request("/api/kelompok/import", {
+    res = await app.request("/api/kelompok/import", {
       ...json({ csv }),
       headers: { cookie, "Content-Type": "application/json" },
     });

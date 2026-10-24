@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
-import { initDb, ensureAdmin, seedKategori, seedSenamKategori, sesuaikanRubrikDimensi } from "./db";
+import { initDb, ensureAdmin, seedKategori, seedSenamKategori, sesuaikanRubrikDimensi, isiMuridDariDataLama } from "./db";
 import { loginHandler, logoutHandler, requireAuth } from "./auth";
 import adminRoutes from "./admin";
 import scoringRoutes from "./scoring";
 import senamRoutes from "./senam";
+import muridRoutes from "./murid";
 
 // bootApp: siapkan DB + admin + seed, kembalikan aplikasi Hono (tanpa listen,
 // supaya bisa dipakai langsung oleh bun test via app.request()).
@@ -13,6 +14,7 @@ export async function bootApp(dataDir: string) {
   seedKategori();
   seedSenamKategori();
   sesuaikanRubrikDimensi();
+  isiMuridDariDataLama();
   const admin = await ensureAdmin();
   if (admin.generatedPassword) {
     console.log("==============================================");
@@ -51,6 +53,7 @@ export async function bootApp(dataDir: string) {
   app.route("/api", adminRoutes);
   app.route("/api", scoringRoutes);
   app.route("/api", senamRoutes);
+  app.route("/api", muridRoutes);
 
   // File statis frontend
   app.use("/*", serveStatic({ root: "./public" }));

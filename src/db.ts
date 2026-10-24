@@ -200,6 +200,22 @@ const MIGRATIONS: string[] = [
     ip TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
   `CREATE INDEX IF NOT EXISTS idx_aktivitas_log_waktu ON aktivitas_log(created_at DESC)`,
+  // ------------------------------------------------------------------
+  // Master data Murid (2026-10-24, keputusan Pak Gun): satu daftar induk
+  // murid per rombel, dipakai bersama modul projek & senam. Anggota
+  // kelompok tidak lagi diketik bebas — siswa/senam_anggota menaut ke
+  // murid lewat murid_id (kolom nama lama dipertahankan sebagai snapshot
+  // cadangan). Migrasi ditempel di AKHIR agar nomor versi lama tidak geser.
+  `CREATE TABLE IF NOT EXISTS murid (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    nama TEXT NOT NULL,
+    nis TEXT NOT NULL DEFAULT '',
+    nama_norm TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE INDEX IF NOT EXISTS idx_murid_kelas ON murid(kelas_id, nama_norm)`,
+  `ALTER TABLE siswa ADD COLUMN murid_id INTEGER REFERENCES murid(id) ON DELETE SET NULL`,
+  `ALTER TABLE senam_anggota ADD COLUMN murid_id INTEGER REFERENCES murid(id) ON DELETE SET NULL`,
 ];
 
 export function initDb(dataDir: string): Database {
@@ -456,6 +472,74 @@ export function sesuaikanRubrikDimensi(): void {
     });
     tx();
   }
+}
+
+// ---------------------------------------------------------------------------
+// Master Murid: normalisasi nama untuk pencocokan (keputusan Pak Gun,
+// 2026-10-24): spasi depan/belakang dibuang, spasi ganda disatukan, huruf
+// besar/kecil diabaikan — di luar itu ejaan harus sama persis.
+// ---------------------------------------------------------------------------
+
+export function normalisasiNama(nama: string): string {
+  return String(nama || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+export function namaRapi(nama: string): string {
+  return String(nama || "").trim().replace(/\s+/g, " ");
+}
+
+// Isi awal menu Murid dari nama-nama yang SUDAH terdaftar di kelompok
+// projek & senam, lalu tautkan baris siswa/senam_anggota lama ke murid-nya.
+// Idempoten: hanya memproses baris yang murid_id-nya masih NULL, jadi aman
+// dipanggil setiap boot. Nama hasil isian mengikuti kemunculan pertama;
+// salah eja lama yang terbawa cukup dikoreksi sekali di menu Murid.
+export function isiMuridDariDataLama(): void {
+  const db = getDb();
+  const sumber: { nama: string; kelas_id: number }[] = [
+    ...(db
+      .query(
+        `SELECT s.nama AS nama, kel.kelas_id AS kelas_id FROM siswa s
+         JOIN kelompok kel ON kel.id = s.kelompok_id WHERE s.murid_id IS NULL`
+      )
+      .all() as { nama: string; kelas_id: number }[]),
+    ...(db
+      .query(
+        `SELECT s.nama AS nama, kel.kelas_id AS kelas_id FROM senam_anggota s
+         JOIN senam_kelompok kel ON kel.id = s.kelompok_id WHERE s.murid_id IS NULL`
+      )
+      .all() as { nama: string; kelas_id: number }[]),
+  ];
+  if (!sumber.length) return;
+  const cari = db.query("SELECT id FROM murid WHERE kelas_id = ? AND nama_norm = ?");
+  const ins = db.query("INSERT INTO murid (kelas_id, nama, nis, nama_norm) VALUES (?, ?, '', ?)");
+  const tautSiswa = db.query(
+    `UPDATE siswa SET murid_id = (SELECT m.id FROM murid m
+       JOIN kelompok kel ON kel.kelas_id = m.kelas_id
+       WHERE kel.id = siswa.kelompok_id AND m.nama_norm = ?)
+     WHERE id = ? AND murid_id IS NULL`
+  );
+  const tautSenam = db.query(
+    `UPDATE senam_anggota SET murid_id = (SELECT m.id FROM murid m
+       JOIN senam_kelompok kel ON kel.kelas_id = m.kelas_id
+       WHERE kel.id = senam_anggota.kelompok_id AND m.nama_norm = ?)
+     WHERE id = ? AND murid_id IS NULL`
+  );
+  const tx = db.transaction(() => {
+    for (const r of sumber) {
+      const norm = normalisasiNama(r.nama);
+      if (!norm) continue;
+      if (!cari.get(r.kelas_id, norm)) ins.run(r.kelas_id, namaRapi(r.nama), norm);
+    }
+    const siswaLama = db
+      .query("SELECT id, nama FROM siswa WHERE murid_id IS NULL")
+      .all() as { id: number; nama: string }[];
+    for (const s of siswaLama) tautSiswa.run(normalisasiNama(s.nama), s.id);
+    const anggotaLama = db
+      .query("SELECT id, nama FROM senam_anggota WHERE murid_id IS NULL")
+      .all() as { id: number; nama: string }[];
+    for (const s of anggotaLama) tautSenam.run(normalisasiNama(s.nama), s.id);
+  });
+  tx();
 }
 
 export async function ensureAdmin(): Promise<{ username: string; generatedPassword: string | null }> {

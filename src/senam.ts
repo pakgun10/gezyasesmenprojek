@@ -6,6 +6,7 @@ import { logAktivitas, aktorAdmin, aktorPenilai } from "./log";
 import { join, extname } from "node:path";
 import { mkdirSync, writeFileSync, unlinkSync, statSync } from "node:fs";
 import { randomBytes } from "node:crypto";
+import { validasiPilihanMurid } from "./murid";
 
 // ===========================================================================
 // Modul Asesmen Senam — modul sejajar asesmen projek (audit 2026-10-22).
@@ -87,7 +88,10 @@ senam.get("/senam/juri/kelompok/:id", requireJudge, (c) => {
     .get(c.req.param("id")) as any;
   if (!kel) return c.json({ error: "Kelompok tidak ditemukan" }, 404);
   kel.anggota = db
-    .query("SELECT nama FROM senam_anggota WHERE kelompok_id = ? ORDER BY urutan, id")
+    .query(
+      `SELECT COALESCE(m.nama, s.nama) AS nama FROM senam_anggota s
+       LEFT JOIN murid m ON m.id = s.murid_id WHERE s.kelompok_id = ? ORDER BY s.urutan, s.id`
+    )
     .all(kel.id);
   kel.nilai_saya = db
     .query(
@@ -242,7 +246,10 @@ sec("get", "/senam/kelompok/:id", (c) => {
     .get(c.req.param("id"));
   if (!kel) return bad(c, "Kelompok tidak ditemukan", 404);
   const anggota = db
-    .query("SELECT id, nama, urutan FROM senam_anggota WHERE kelompok_id = ? ORDER BY urutan, id")
+    .query(
+      `SELECT s.id, COALESCE(m.nama, s.nama) AS nama, s.urutan, s.murid_id FROM senam_anggota s
+       LEFT JOIN murid m ON m.id = s.murid_id WHERE s.kelompok_id = ? ORDER BY s.urutan, s.id`
+    )
     .all(c.req.param("id"));
   return c.json({ kelompok: kel, anggota });
 });
@@ -276,6 +283,14 @@ sec("put", "/senam/kelompok/:id", async (c) => {
   const db = getDb();
   if (kelas_id && !db.query("SELECT id FROM kelas WHERE id = ?").get(kelas_id))
     return bad(c, "Kelas tidak dikenal");
+  if (kelas_id) {
+    const lama = db.query("SELECT kelas_id FROM senam_kelompok WHERE id = ?").get(c.req.param("id")) as { kelas_id: number } | null;
+    if (lama && lama.kelas_id !== kelas_id) {
+      const terkait = (db.query("SELECT COUNT(*) n FROM senam_anggota WHERE kelompok_id = ? AND murid_id IS NOT NULL").get(c.req.param("id")) as { n: number }).n;
+      if (terkait > 0)
+        return bad(c, "Kelompok ini sudah punya anggota dari menu Murid rombel lama — kosongkan dulu anggotanya sebelum memindah rombel");
+    }
+  }
   try {
     db.query(
       `UPDATE senam_kelompok SET nama_kelompok = ?, judul_penampilan = ?,
@@ -304,24 +319,25 @@ sec("delete", "/senam/kelompok/:id", (c) => {
   return c.json({ ok: true });
 });
 
-// Ganti seluruh daftar anggota satu kelompok senam (form dinamis, maks. 12)
+// Ganti seluruh daftar anggota satu kelompok senam. Sejak master Murid
+// (2026-10-24) daftar dikirim sebagai murid_ids hasil ceklis dari menu
+// Murid — nama bebas (names) tidak lagi diterima (aturan sama projek).
 sec("put", "/senam/kelompok/:id/anggota", async (c) => {
   const b = await c.req.json().catch(() => ({}));
-  const names: string[] = Array.isArray(b.names) ? b.names.map((n: any) => String(n).trim()).filter(Boolean) : [];
-  if (names.length < 1) return bad(c, "Minimal 1 nama murid");
-  if (names.length > 12) return bad(c, "Maksimal 12 murid per kelompok");
   const db = getDb();
-  const kel = db.query("SELECT id, nama_kelompok FROM senam_kelompok WHERE id = ?").get(c.req.param("id")) as { id: number; nama_kelompok: string } | null;
+  const kel = db.query("SELECT id, nama_kelompok, kelas_id FROM senam_kelompok WHERE id = ?").get(c.req.param("id")) as { id: number; nama_kelompok: string; kelas_id: number } | null;
   if (!kel) return bad(c, "Kelompok tidak ditemukan", 404);
+  const v = validasiPilihanMurid("senam", kel.id, kel.kelas_id, b.murid_ids);
+  if ("error" in v) return bad(c, v.error);
   const del = db.query("DELETE FROM senam_anggota WHERE kelompok_id = ?");
-  const ins = db.query("INSERT INTO senam_anggota (kelompok_id, nama, urutan) VALUES (?, ?, ?)");
-  const tx = db.transaction((list: string[]) => {
-    del.run(c.req.param("id"));
-    list.forEach((n, i) => ins.run(c.req.param("id"), n, i + 1));
+  const ins = db.query("INSERT INTO senam_anggota (kelompok_id, nama, murid_id, urutan) VALUES (?, ?, ?, ?)");
+  const tx = db.transaction((list: { id: number; nama: string }[]) => {
+    del.run(kel.id);
+    list.forEach((m, i) => ins.run(kel.id, m.nama, m.id, i + 1));
   });
-  tx(names);
-  logAdmin(c, "Ubah anggota kelompok senam", `${kel.nama_kelompok} • ${names.length} anggota`);
-  return c.json({ ok: true, jumlah: names.length });
+  tx(v.murid);
+  logAdmin(c, "Ubah anggota kelompok senam", `${kel.nama_kelompok} • ${v.murid.length} anggota`);
+  return c.json({ ok: true, jumlah: v.murid.length });
 });
 
 // ---------------------------------------------------------------- admin: kategori & kriteria senam

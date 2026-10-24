@@ -107,9 +107,18 @@ describe("senam: kelompok & anggota", () => {
       headers: auth(cookie),
     });
     expect(res.status).toBe(400);
-    // anggota 6 murid
+    // anggota 6 murid — dipilih dari master Murid (murid_ids), bukan nama bebas
+    const muridIds: number[] = [];
+    for (const nama of ["Andi", "Budi", "Citra", "Dewi", "Eka", "Fajar"]) {
+      const mr = await app.request("/api/murid", {
+        ...json({ kelas_id: kelasId, nama }),
+        headers: auth(cookie),
+      });
+      expect(mr.status).toBe(200);
+      muridIds.push((await mr.json()).id);
+    }
     res = await app.request(`/api/senam/kelompok/${kelompokId}/anggota`, {
-      ...json({ names: ["Andi", "Budi", "Citra", "Dewi", "Eka", "Fajar"] }),
+      ...json({ murid_ids: muridIds }),
       method: "PUT",
       headers: auth(cookie),
     });
