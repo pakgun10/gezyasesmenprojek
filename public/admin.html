@@ -301,6 +301,10 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
                 <div class="form-group"><label for="juri-pin">PIN <span class="hint">(4–8 digit angka; kosongkan = tidak diubah saat edit)</span></label><input type="password" id="juri-pin" inputmode="numeric" placeholder="cth: 1234"></div>
                 <div class="form-group"><label for="juri-ket">Keterangan</label><input type="text" id="juri-ket" placeholder="cth: Guru Prakarya"></div>
               </div>
+              <div class="form-group"><label>Tugas kelas (rombel)</label>
+                <div id="juri-tugas-rows" class="cek-list"></div>
+                <p class="muted small">Centang rombel yang ditugaskan ke penilai ini — ia hanya melihat dan menilai kelas tersebut (projek &amp; senam). Kosongkan semua = penilai bisa menilai semua kelas (perilaku lama).</p>
+              </div>
               <div class="actions">
                 <button type="submit" class="btn btn-primary" id="juri-submit">Tambah</button>
                 <button type="button" class="btn btn-ghost hidden" id="juri-batal">Batal</button>
@@ -310,7 +314,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
           <div class="card">
             <h3>Daftar Penilai</h3>
             <div class="table-wrap"><table class="data" id="tbl-juri">
-              <thead><tr><th>Kode</th><th>Nama</th><th>Keterangan</th><th class="num">Kelompok dinilai</th><th>Aksi</th></tr></thead>
+              <thead><tr><th>Kode</th><th>Nama</th><th>Keterangan</th><th>Tugas kelas</th><th class="num">Kelompok dinilai</th><th>Aksi</th></tr></thead>
               <tbody></tbody>
             </table></div>
           </div>
@@ -492,7 +496,7 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
   <!-- Area cetak: hanya tampil saat print -->
   <div id="print-area"><div class="ba-doc" id="ba-doc"></div></div>
 
-  <script src="js/admin.js?v=20261028a"></script>
+  <script src="js/admin.js?v=20261028b"></script>
   <script src="js/common.js?v=20261023b"></script>
 </body>
 </html>

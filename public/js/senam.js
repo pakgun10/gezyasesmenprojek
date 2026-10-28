@@ -131,7 +131,9 @@
       var d = await apiJson("/api/senam/juri/kelas");
       state.kelas = d.kelas || [];
       if (!state.kelas.length) {
-        $("kelas-list").innerHTML = '<div class="card"><p class="muted">Belum ada kelas yang terdaftar.</p></div>';
+        $("kelas-list").innerHTML = '<div class="card"><p class="muted">' +
+          (d.terbatas ? "Belum ada kelas yang ditugaskan kepada Anda. Hubungi admin/panitia." : "Belum ada kelas yang terdaftar.") +
+          "</p></div>";
         return;
       }
       $("kelas-list").innerHTML = state.kelas.map(function (k) {

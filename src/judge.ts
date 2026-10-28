@@ -115,3 +115,23 @@ export const requireJudge = createMiddleware(async (c, next) => {
   c.set("juri", { id: row.id, kode: row.kode, nama: row.nama });
   await next();
 });
+
+// ------------------------------------------------------------------
+// Tugas penilai per kelas (rombel). Mengembalikan null bila penilai
+// belum punya baris tugas sama sekali = TIDAK dibatasi (perilaku lama,
+// supaya penilai yang sudah berjalan tidak terkunci sebelum admin
+// mengatur tugasnya). Bila ada baris tugas, hanya kelas-kelas itu
+// yang boleh dilihat/dinilai — berlaku untuk modul projek maupun
+// senam karena keduanya memakai akun penilai dan tabel kelas yang sama.
+export function tugasKelasJuri(juriId: number): number[] | null {
+  const rows = getDb()
+    .query("SELECT kelas_id FROM juri_tugas WHERE juri_id = ? ORDER BY kelas_id")
+    .all(juriId) as { kelas_id: number }[];
+  if (!rows.length) return null;
+  return rows.map((r) => r.kelas_id);
+}
+
+export function bolehMenilaiKelas(juriId: number, kelasId: number): boolean {
+  const tugas = tugasKelasJuri(juriId);
+  return tugas === null || tugas.includes(kelasId);
+}

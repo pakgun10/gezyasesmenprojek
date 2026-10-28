@@ -416,13 +416,27 @@ sec("post", "/kelompok/import", async (c) => {
 
 // ---------------------------------------------------------------- juri
 sec("get", "/juri", (c) => {
-  const rows = getDb()
+  const db = getDb();
+  const rows = db
     .query(
       `SELECT j.id, j.kode, j.nama, j.keterangan, j.created_at,
        (SELECT COUNT(DISTINCT p.kelompok_id) FROM penilaian p WHERE p.juri_id = j.id) AS jml_kelompok_dinilai
        FROM juri j ORDER BY j.kode`
     )
-    .all();
+    .all() as any[];
+  // Tugas per kelas (rombel) untuk tiap penilai; [] = belum dibatasi.
+  const tugas = db
+    .query(
+      `SELECT jt.juri_id, k.id AS kelas_id, k.nama AS kelas_nama
+       FROM juri_tugas jt JOIN kelas k ON k.id = jt.kelas_id ORDER BY k.tingkat, k.nama`
+    )
+    .all() as { juri_id: number; kelas_id: number; kelas_nama: string }[];
+  const perJuri = new Map<number, { kelas_id: number; kelas_nama: string }[]>();
+  for (const t of tugas) {
+    if (!perJuri.has(t.juri_id)) perJuri.set(t.juri_id, []);
+    perJuri.get(t.juri_id)!.push({ kelas_id: t.kelas_id, kelas_nama: t.kelas_nama });
+  }
+  for (const j of rows) j.tugas_kelas = perJuri.get(j.id) || [];
   return c.json({ juri: rows });
 });
 
@@ -460,6 +474,31 @@ sec("put", "/juri/:id", async (c) => {
   }
   logAdmin(c, "Ubah penilai", `${jRow ? jRow.kode + " — " : ""}${nama}${pin ? " (PIN diganti)" : ""}`);
   return c.json({ ok: true });
+});
+
+// Atur tugas penilai per kelas. Daftar kosong = tugas dikosongkan,
+// penilai kembali tidak dibatasi (perilaku lama). Mengganti seluruh
+// daftar dalam satu transaksi; kelas yang tidak dikenal ditolak.
+sec("put", "/juri/:id/tugas", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const kelasIds = Array.isArray(b.kelas_ids) ? b.kelas_ids.map((x: any) => Number(x)).filter((x: number) => Number.isFinite(x)) : null;
+  if (kelasIds === null) return bad(c, "kelas_ids harus berupa daftar id kelas");
+  const db = getDb();
+  const jRow = db.query("SELECT kode, nama FROM juri WHERE id = ?").get(c.req.param("id")) as { kode: string; nama: string } | null;
+  if (!jRow) return bad(c, "Penilai tidak ditemukan", 404);
+  const unik = [...new Set(kelasIds)];
+  const nama: string[] = [];
+  for (const id of unik) {
+    const k = db.query("SELECT nama FROM kelas WHERE id = ?").get(id) as { nama: string } | null;
+    if (!k) return bad(c, `Kelas id ${id} tidak ditemukan`);
+    nama.push(k.nama);
+  }
+  db.transaction(() => {
+    db.query("DELETE FROM juri_tugas WHERE juri_id = ?").run(c.req.param("id"));
+    for (const id of unik) db.query("INSERT INTO juri_tugas (juri_id, kelas_id) VALUES (?, ?)").run(c.req.param("id"), id);
+  })();
+  logAdmin(c, "Atur tugas penilai", `${jRow.kode} — ${jRow.nama}: ${nama.length ? nama.join(", ") : "semua kelas (tugas dikosongkan)"}`);
+  return c.json({ ok: true, tugas_kelas: unik });
 });
 
 sec("delete", "/juri/:id", (c) => {

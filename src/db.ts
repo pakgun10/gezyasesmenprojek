@@ -216,6 +216,17 @@ const MIGRATIONS: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_murid_kelas ON murid(kelas_id, nama_norm)`,
   `ALTER TABLE siswa ADD COLUMN murid_id INTEGER REFERENCES murid(id) ON DELETE SET NULL`,
   `ALTER TABLE senam_anggota ADD COLUMN murid_id INTEGER REFERENCES murid(id) ON DELETE SET NULL`,
+  // ------------------------------------------------------------------
+  // Tugas penilai per kelas (2026-10-28, keputusan Pak Gun: tugas per
+  // kelas/rombel, bukan per kelompok). Ditempel di AKHIR agar nomor
+  // versi lama tidak geser. Penilai TANPA baris tugas = tidak dibatasi
+  // (perilaku lama) — pembatasan hanya aktif bila admin mengisi tugas.
+  // Hapus penilai/kelas ikut menghapus tugasnya (CASCADE).
+  `CREATE TABLE IF NOT EXISTS juri_tugas (
+    juri_id INTEGER NOT NULL REFERENCES juri(id) ON DELETE CASCADE,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    PRIMARY KEY (juri_id, kelas_id))`,
+  `CREATE INDEX IF NOT EXISTS idx_juri_tugas_kelas ON juri_tugas(kelas_id)`,
 ];
 
 export function initDb(dataDir: string): Database {

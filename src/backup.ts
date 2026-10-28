@@ -30,6 +30,7 @@ const TABEL: string[] = [
   "users",
   "juri",
   "kelas",
+  "juri_tugas",
   "cabang_produk",
   "kategori",
   "kriteria",

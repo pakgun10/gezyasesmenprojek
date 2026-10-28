@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getDb, getDataDir } from "./db";
-import { requireJudge } from "./judge";
+import { requireJudge, tugasKelasJuri, bolehMenilaiKelas } from "./judge";
 import { requireAuth, clientIp } from "./auth";
 import { logAktivitas, aktorAdmin, aktorPenilai } from "./log";
 import { join, extname } from "node:path";
@@ -46,14 +46,19 @@ senam.get("/senam/juri/kategori", requireJudge, (c) => {
 });
 
 senam.get("/senam/juri/kelas", requireJudge, (c) => {
+  const juri = c.get("juri") as { id: number };
+  const tugas = tugasKelasJuri(juri.id);
   const rows = getDb()
     .query(
       `SELECT k.id, k.nama, k.tingkat, COUNT(kel.id) AS jml_kelompok FROM kelas k
        LEFT JOIN senam_kelompok kel ON kel.kelas_id = k.id
        GROUP BY k.id ORDER BY k.tingkat, k.nama`
     )
-    .all();
-  return c.json({ kelas: rows });
+    .all() as any[];
+  // Sama seperti modul projek: penilai bertugas hanya melihat kelas
+  // tugasnya; penilai tanpa tugas tetap melihat semua (perilaku lama).
+  const kelas = tugas === null ? rows : rows.filter((k) => tugas.includes(k.id));
+  return c.json({ kelas, terbatas: tugas !== null });
 });
 
 // Daftar kelompok senam per kelas + status sudah dinilai juri ini
@@ -61,6 +66,10 @@ senam.get("/senam/juri/kelompok", requireJudge, (c) => {
   const kelasId = c.req.query("kelas_id");
   if (!kelasId) return c.json({ error: "kelas_id wajib" }, 400);
   const juri = c.get("juri") as { id: number };
+  if (!bolehMenilaiKelas(juri.id, Number(kelasId))) {
+    const totalKategori = (getDb().query("SELECT COUNT(*) n FROM senam_kategori").get() as { n: number }).n;
+    return c.json({ kelompok: [], total_kategori: totalKategori });
+  }
   const rows = getDb()
     .query(
       `SELECT kel.id, kel.nama_kelompok, kel.judul_penampilan,
@@ -87,6 +96,7 @@ senam.get("/senam/juri/kelompok/:id", requireJudge, (c) => {
     )
     .get(c.req.param("id")) as any;
   if (!kel) return c.json({ error: "Kelompok tidak ditemukan" }, 404);
+  if (!bolehMenilaiKelas(juri.id, kel.kelas_id)) return c.json({ error: "Kelompok ini bukan tugas Anda" }, 403);
   kel.anggota = db
     .query(
       `SELECT COALESCE(m.nama, s.nama) AS nama FROM senam_anggota s
@@ -121,8 +131,9 @@ senam.post("/senam/juri/nilai", requireJudge, async (c) => {
   if (!Number.isFinite(skor) || skor < 0 || skor > 100) return c.json({ error: "Skor harus 0–100" }, 400);
   if (skor < kri.skor_min || skor > kri.skor_max)
     return c.json({ error: `Skor harus dalam rentang kriteria (${kri.skor_min}–${kri.skor_max})` }, 400);
-  const kel = db.query("SELECT id, nama_kelompok FROM senam_kelompok WHERE id = ?").get(kelompok_id) as { id: number; nama_kelompok: string } | null;
+  const kel = db.query("SELECT id, kelas_id, nama_kelompok FROM senam_kelompok WHERE id = ?").get(kelompok_id) as { id: number; kelas_id: number; nama_kelompok: string } | null;
   if (!kel) return c.json({ error: "Kelompok tidak ditemukan" }, 404);
+  if (!bolehMenilaiKelas(juri.id, kel.kelas_id)) return c.json({ error: "Kelompok ini bukan tugas Anda" }, 403);
   const kat = db.query("SELECT nama FROM senam_kategori WHERE id = ?").get(kategori_id) as { nama: string } | null;
   db.query(
     `INSERT INTO senam_penilaian (kelompok_id, juri_id, kategori_id, kriteria_id, skor, updated_at)
@@ -144,8 +155,10 @@ senam.post("/senam/juri/foto", requireJudge, async (c) => {
   const caption = String(form.get("caption") || "").slice(0, 200);
   const file = form.get("foto");
   const db = getDb();
-  if (!kelompok_id || !db.query("SELECT id FROM senam_kelompok WHERE id = ?").get(kelompok_id))
+  const kelCek = db.query("SELECT kelas_id FROM senam_kelompok WHERE id = ?").get(kelompok_id) as { kelas_id: number } | null;
+  if (!kelompok_id || !kelCek)
     return c.json({ error: "Kelompok tidak valid" }, 404);
+  if (!bolehMenilaiKelas(juri.id, kelCek.kelas_id)) return c.json({ error: "Kelompok ini bukan tugas Anda" }, 403);
   if (!(file instanceof File)) return c.json({ error: "File foto wajib diisi" }, 400);
   if (!file.type.startsWith("image/")) return c.json({ error: "File harus berupa gambar" }, 400);
   if (file.size > MAX_FOTO) return c.json({ error: "Ukuran foto maksimal 8 MB" }, 400);

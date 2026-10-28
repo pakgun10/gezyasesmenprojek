@@ -747,6 +747,31 @@
   });
 
   // ---------- JURI ----------
+  // Ceklis tugas kelas (rombel). Flag siap hanya true bila ceklis
+  // berhasil dirender — bila gagal dimuat, simpan penilai TIDAK
+  // menyentuh tugasnya (cegah tugas terhapus gara-gara ceklis kosong).
+  window.__juriTugasSiap = false;
+  async function muatJuriTugasRows(terpilih) {
+    window.__juriTugasSiap = false;
+    try {
+      var d = await apiJson("/api/kelas");
+      window.__kelasCache = d.kelas || [];
+      var pilih = {};
+      (terpilih || []).forEach(function (id) { pilih[id] = true; });
+      $("juri-tugas-rows").innerHTML = (window.__kelasCache || []).map(function (k) {
+        return '<label><input type="checkbox" data-jtugas="' + k.id + '"' + (pilih[k.id] ? " checked" : "") + "> " + esc(k.nama) + "</label>";
+      }).join("") || '<span class="muted">Belum ada kelas. Tambahkan dulu di tab Kelas.</span>';
+      window.__juriTugasSiap = true;
+    } catch (e) {
+      $("juri-tugas-rows").innerHTML = '<span class="muted">Daftar kelas gagal dimuat — tugas tidak diubah saat menyimpan.</span>';
+    }
+  }
+  function juriTugasTerpilih() {
+    var out = [];
+    document.querySelectorAll("[data-jtugas]:checked").forEach(function (cb) { out.push(Number(cb.getAttribute("data-jtugas"))); });
+    return out;
+  }
+
   function resetJuriForm() {
     $("juri-id").value = "";
     $("juri-kode").value = "";
@@ -757,21 +782,23 @@
     $("juri-form-title").textContent = "Tambah Penilai";
     $("juri-submit").textContent = "Tambah";
     $("juri-batal").classList.add("hidden");
+    muatJuriTugasRows([]);
   }
 
   async function loadJuriTab() {
     resetJuriForm();
     var tb = $("tbl-juri").querySelector("tbody");
-    tb.innerHTML = loadingRow(5, "Memuat penilai…");
+    tb.innerHTML = loadingRow(6, "Memuat penilai…");
     try {
       var d = await apiJson("/api/juri");
       tb.innerHTML = (d.juri || []).map(function (j) {
         return "<tr><td><b>" + esc(j.kode) + "</b></td><td>" + esc(j.nama) + "</td>" +
           "<td>" + esc(j.keterangan || "-") + "</td>" +
+          "<td>" + (((j.tugas_kelas || []).map(function (t) { return esc(t.kelas_nama); }).join(", ")) || "Semua kelas") + "</td>" +
           '<td class="num">' + esc(j.jml_kelompok_dinilai) + "</td>" +
           '<td style="white-space:nowrap"><button type="button" class="btn btn-ghost btn-sm" data-jedit="' + j.id + '">✏️</button> ' +
           '<button type="button" class="btn btn-danger btn-sm" data-jdel="' + j.id + '">🗑️</button></td></tr>';
-      }).join("") || '<tr><td colspan="5" class="muted">Belum ada penilai.</td></tr>';
+      }).join("") || '<tr><td colspan="6" class="muted">Belum ada penilai.</td></tr>';
       tb.querySelectorAll("[data-jedit]").forEach(function (b) {
         b.addEventListener("click", function () { editJuri(Number(b.getAttribute("data-jedit"))); });
       });
@@ -795,6 +822,7 @@
       $("juri-form-title").textContent = "Ubah Penilai";
       $("juri-submit").textContent = "💾 Simpan";
       $("juri-batal").classList.remove("hidden");
+      muatJuriTugasRows((j.tugas_kelas || []).map(function (t) { return t.kelas_id; }));
       window.scrollTo(0, 0);
     } catch (e) { handleErr(e); }
   }
@@ -817,9 +845,22 @@
     if (!id) { body.kode = $("juri-kode").value.trim(); body.pin = pin; }
     else if (pin) body.pin = pin;
     try {
-      if (id) await apiJson("/api/juri/" + id, "PUT", body);
-      else await apiJson("/api/juri", "POST", body);
-      showAlert(id ? "Penilai diperbarui." : "Penilai ditambahkan.", "success");
+      var edit = !!id;
+      var baru = edit ? null : await apiJson("/api/juri", "POST", body);
+      if (edit) await apiJson("/api/juri/" + id, "PUT", body);
+      else id = baru.id;
+      // Simpan tugas hanya bila ceklis berhasil dimuat; bila tidak,
+      // tugas lama dibiarkan utuh (lihat muatJuriTugasRows).
+      if (window.__juriTugasSiap) {
+        try {
+          await apiJson("/api/juri/" + id + "/tugas", "PUT", { kelas_ids: juriTugasTerpilih() });
+        } catch (e2) {
+          showAlert("Penilai disimpan, tetapi tugas kelas gagal disimpan: " + (e2.message || "terjadi kesalahan"));
+          loadJuriTab();
+          return;
+        }
+      }
+      showAlert(edit ? "Penilai diperbarui." : "Penilai ditambahkan.", "success");
       loadJuriTab();
     } catch (e) { handleErr(e); }
   });
