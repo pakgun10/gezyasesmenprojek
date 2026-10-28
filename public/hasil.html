@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hasil Asesmen — Admin</title>
+  <link rel="stylesheet" href="css/style.css?v=20261028a">
+</head>
+<body>
+  <div class="no-print">
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <span class="brand"><a href="index.html">📋 Asesmen Kokurikuler</a></span>
+        <span class="spacer"></span>
+        <a class="btn btn-ghost btn-sm" href="admin.html">← Kembali ke Admin</a>
+        <button id="btn-logout" class="btn btn-ghost btn-sm hidden" type="button">Keluar</button>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div id="alert" class="alert hidden"></div>
+
+      <section id="view-butuh-login" class="hidden">
+        <div class="card narrow">
+          <h2>🔐 Khusus Admin</h2>
+          <p class="muted">Halaman Hasil Asesmen hanya bisa dibuka setelah login sebagai admin.</p>
+          <a class="btn btn-primary btn-block" href="admin.html">Buka Halaman Admin untuk Login</a>
+        </div>
+      </section>
+
+      <section id="view-app" class="hidden">
+        <div class="card">
+          <h2>📊 Hasil Asesmen</h2>
+          <p class="muted small">Rekap nilai per kelompok dalam dua versi: <b>Lengkap</b> (kartu per kelompok dengan nilai tiap penilai) dan <b>Ringkas</b> (satu baris per murid). Nilai Akhir skala 100, dihitung dari penilai yang sudah lengkap (4/4 kategori), dibulatkan tanpa desimal.</p>
+          <div class="form-row">
+            <div class="form-group"><label for="modul">Modul</label>
+              <select id="modul">
+                <option value="projek">Projek (Kelas 8–9)</option>
+                <option value="senam">Senam (Kelas 7)</option>
+              </select>
+            </div>
+            <div class="form-group"><label for="kelas">Kelas</label><select id="kelas"><option value="">— pilih —</option></select></div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btn-tampilkan">📊 Tampilkan</button>
+            <button type="button" class="btn btn-ghost" id="btn-versi-lengkap">📋 Versi Lengkap</button>
+            <button type="button" class="btn btn-ghost" id="btn-versi-ringkas">📄 Versi Ringkas</button>
+            <button type="button" class="btn btn-ghost" id="btn-csv" disabled>⬇️ Unduh CSV</button>
+            <button type="button" class="btn btn-ghost" id="btn-cetak" disabled>🖨️ Cetak</button>
+          </div>
+          <div id="hasil-info" class="muted small" style="margin-top:10px"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Hasil di luar .no-print supaya ikut tercetak (pola admin.html). -->
+  <main class="wrap">
+    <div id="hasil-area"></div>
+  </main>
+
+  <script src="js/hasil.js?v=20261028a"></script>
+  <script src="js/common.js?v=20261023b"></script>
+</body>
+</html>

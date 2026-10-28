@@ -7,6 +7,7 @@ import scoringRoutes from "./scoring";
 import senamRoutes from "./senam";
 import muridRoutes from "./murid";
 import backupRoutes from "./backup";
+import hasilAsesmenRoutes from "./hasil-asesmen";
 
 // bootApp: siapkan DB + admin + seed, kembalikan aplikasi Hono (tanpa listen,
 // supaya bisa dipakai langsung oleh bun test via app.request()).
@@ -56,6 +57,7 @@ export async function bootApp(dataDir: string) {
   app.route("/api", senamRoutes);
   app.route("/api", muridRoutes);
   app.route("/api", backupRoutes);
+  app.route("/api", hasilAsesmenRoutes);
 
   // File statis frontend
   app.use("/*", serveStatic({ root: "./public" }));
