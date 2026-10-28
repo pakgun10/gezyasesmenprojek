@@ -149,7 +149,9 @@
             <pre class="contoh">nama_kelompok,kelas,tingkat,cabang,nama_produk,murid
 Kelompok 1,7A,7,Olahan Nanas,Dodol Nanas,Andi;Budi;Citra;Dewi;Eka
 Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
-            <div class="form-group"><label for="csv-text">Tempel CSV di sini</label><textarea id="csv-text" rows="6"></textarea></div>
+            <div class="form-group"><label for="csv-file">Pilih file CSV</label><input type="file" id="csv-file" accept=".csv,text/csv"></div>
+            <div class="small muted" id="csv-file-info"></div>
+            <div class="form-group"><label for="csv-text">Tempel CSV di sini (atau isi otomatis dari file di atas)</label><textarea id="csv-text" rows="6"></textarea></div>
             <button type="button" class="btn btn-primary" id="btn-import">⬆️ Impor</button>
             <div id="import-hasil" class="small" style="margin-top:10px"></div>
           </details>
@@ -261,7 +263,9 @@ Kelompok 2,7A,7,Olahan Minuman,Sirup Nanas,Fajar;Gita;Hadi;Indra</pre>
 7.1,Andi Pratama,10101
 7.1,Budi Santoso,10102
 8.2,Citra Lestari,</pre>
-            <div class="form-group"><label for="murid-csv-text">Tempel CSV di sini</label><textarea id="murid-csv-text" rows="6"></textarea></div>
+            <div class="form-group"><label for="murid-csv-file">Pilih file CSV</label><input type="file" id="murid-csv-file" accept=".csv,text/csv"></div>
+            <div class="small muted" id="murid-csv-file-info"></div>
+            <div class="form-group"><label for="murid-csv-text">Tempel CSV di sini (atau isi otomatis dari file di atas)</label><textarea id="murid-csv-text" rows="6"></textarea></div>
             <button type="button" class="btn btn-primary" id="btn-murid-import">⬆️ Impor Murid</button>
             <div id="murid-import-hasil" class="small" style="margin-top:10px"></div>
           </details>

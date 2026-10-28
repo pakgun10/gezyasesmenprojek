@@ -560,6 +560,36 @@
   });
 
   // ----- impor CSV -----
+  // Pemilih file CSV: isi file dibaca di browser lalu dimuat ke kotak teks,
+  // supaya pengguna bisa memeriksa dulu sebelum klik Impor. Tempel teks
+  // tetap jalan seperti sebelumnya; backend tidak berubah (tetap terima
+  // string CSV yang sama).
+  function pasangPemilihCsvFile(inputId, textareaId, infoId) {
+    var input = $(inputId);
+    if (!input) return;
+    input.addEventListener("change", function () {
+      var f = input.files && input.files[0];
+      var info = $(infoId);
+      if (!f) { if (info) info.textContent = ""; return; }
+      if (f.size > 5 * 1024 * 1024) {
+        showAlert("File CSV terlalu besar (maks 5 MB).");
+        input.value = "";
+        if (info) info.textContent = "";
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () {
+        var teks = String(reader.result || "").replace(/^\uFEFF/, "");
+        $(textareaId).value = teks;
+        var baris = teks.split(/\r?\n/).filter(function (l) { return l.trim(); }).length;
+        if (info) info.textContent = "File terpilih: " + f.name + " (" + baris + " baris, termasuk header bila ada). Periksa isi di kotak teks, lalu klik Impor.";
+      };
+      reader.onerror = function () { showAlert("File CSV tidak bisa dibaca."); };
+      reader.readAsText(f);
+    });
+  }
+  pasangPemilihCsvFile("csv-file", "csv-text", "csv-file-info");
+
   $("btn-import").addEventListener("click", async function () {
     var csv = $("csv-text").value;
     var box = $("import-hasil");
@@ -575,6 +605,8 @@
       }
       box.innerHTML = html;
       $("csv-text").value = "";
+      if ($("csv-file")) $("csv-file").value = "";
+      if ($("csv-file-info")) $("csv-file-info").textContent = "";
       loadKelompokTable();
       // refresh cache kelas karena impor bisa menambah kelas baru
       var d = await apiJson("/api/kelas");
@@ -687,6 +719,8 @@
     muridCariT = setTimeout(loadMuridTable, 500);
   });
 
+  pasangPemilihCsvFile("murid-csv-file", "murid-csv-text", "murid-csv-file-info");
+
   $("btn-murid-import").addEventListener("click", async function () {
     var csv = $("murid-csv-text").value;
     var box = $("murid-import-hasil");
@@ -702,6 +736,8 @@
       }
       box.innerHTML = html;
       $("murid-csv-text").value = "";
+      if ($("murid-csv-file")) $("murid-csv-file").value = "";
+      if ($("murid-csv-file-info")) $("murid-csv-file-info").textContent = "";
       loadMuridTable();
     } catch (e) {
       box.innerHTML = '<div class="alert alert-error">❌ ' + esc(e.message) + "</div>";
