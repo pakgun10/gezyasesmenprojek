@@ -38,7 +38,8 @@ body::before {
   aspect-ratio: 640 / 636;
   transform: translate(-50%, -50%);
   background: url("../img/logo-sekolah.webp") center center / contain no-repeat;
-  opacity: 0.165;
+  opacity: 0.08;
+  filter: grayscale(1);
   pointer-events: none;
   z-index: 0;
 }
