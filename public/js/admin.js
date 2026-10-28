@@ -151,7 +151,10 @@
   });
 
   document.querySelectorAll("#tabs .tab-btn").forEach(function (b) {
-    b.addEventListener("click", function () { switchTab(b.getAttribute("data-tab")); });
+    b.addEventListener("click", function () {
+      if (b.tagName === "A") return; // tautan menu (mis. Hasil) navigasi biasa, bukan ganti tab
+      switchTab(b.getAttribute("data-tab"));
+    });
   });
 
   // ---------- DASBOR ----------
