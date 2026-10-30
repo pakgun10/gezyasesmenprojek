@@ -227,6 +227,27 @@ const MIGRATIONS: string[] = [
     kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
     PRIMARY KEY (juri_id, kelas_id))`,
   `CREATE INDEX IF NOT EXISTS idx_juri_tugas_kelas ON juri_tugas(kelas_id)`,
+  // ------------------------------------------------------------------
+  // Daftar Hadir per kelas (2026-10-30, permintaan Pak Gun: versi cetak
+  // + simpan). Ditempel di AKHIR agar nomor versi lama tidak geser.
+  // Satu baris per (tanggal, modul, anggota). kelompok_id/anggota_id
+  // sengaja TANPA foreign key karena merujuk ke kelompok/siswa untuk
+  // projek dan ke senam_kelompok/senam_anggota untuk senam; validasi
+  // keanggotaan ditegakkan di src/kehadiran.ts, bukan di skema.
+  `CREATE TABLE IF NOT EXISTS kehadiran (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tanggal TEXT NOT NULL,
+    modul TEXT NOT NULL,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    kelompok_id INTEGER NOT NULL,
+    anggota_id INTEGER NOT NULL,
+    nama TEXT NOT NULL DEFAULT '',
+    nis TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'hadir',
+    keterangan TEXT NOT NULL DEFAULT '',
+    updated_at TEXT,
+    UNIQUE(tanggal, modul, anggota_id))`,
+  `CREATE INDEX IF NOT EXISTS idx_kehadiran_kelas_tanggal ON kehadiran(kelas_id, tanggal)`,
 ];
 
 export function initDb(dataDir: string): Database {

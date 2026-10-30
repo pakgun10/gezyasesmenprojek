@@ -48,6 +48,7 @@ const TABEL: string[] = [
   "berita_acara",
   "senam_berita_acara",
   "aktivitas_log",
+  "kehadiran",
 ];
 
 const POLA_NAMA_BERKAS = /^[A-Za-z0-9._-]+$/;
