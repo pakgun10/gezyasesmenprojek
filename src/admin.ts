@@ -21,40 +21,49 @@ function logAdmin(c: any, aksi: string, detail = "") {
 }
 
 // ---------------------------------------------------------------- dashboard
+// Rekap menggabungkan PROJEK + SENAM (perbaikan 2026-10-31: dasbor lama
+// hanya menghitung tabel projek, sehingga kelas 7 selalu 0/0/0 meski
+// kelompok senam sudah berisi anggota dan sudah dinilai).
+// Dihitung dengan subkueri per kelas, bukan JOIN langsung, supaya
+// kelompok x anggota x nilai tidak saling menggandakan hitungan.
 sec("get", "/dashboard", (c) => {
   const db = getDb();
   const one = (sql: string, p: any[] = []) => (db.query(sql).get(...p) as { n: number }).n;
   const perKelas = db
     .query(
       `SELECT k.id, k.nama, k.tingkat,
-              COUNT(DISTINCT kel.id) AS kelompok,
-              COUNT(DISTINCT s.id) AS siswa,
-              COUNT(DISTINCT p.id) AS nilai_masuk
+              (SELECT COUNT(*) FROM kelompok WHERE kelas_id = k.id)
+                + (SELECT COUNT(*) FROM senam_kelompok WHERE kelas_id = k.id) AS kelompok,
+              (SELECT COUNT(*) FROM siswa s JOIN kelompok kel ON kel.id = s.kelompok_id WHERE kel.kelas_id = k.id)
+                + (SELECT COUNT(*) FROM senam_anggota s JOIN senam_kelompok kel ON kel.id = s.kelompok_id WHERE kel.kelas_id = k.id) AS siswa,
+              (SELECT COUNT(*) FROM penilaian p JOIN kelompok kel ON kel.id = p.kelompok_id WHERE kel.kelas_id = k.id)
+                + (SELECT COUNT(*) FROM senam_penilaian p JOIN senam_kelompok kel ON kel.id = p.kelompok_id WHERE kel.kelas_id = k.id) AS nilai_masuk
        FROM kelas k
-       LEFT JOIN kelompok kel ON kel.kelas_id = k.id
-       LEFT JOIN siswa s ON s.kelompok_id = kel.id
-       LEFT JOIN penilaian p ON p.kelompok_id = kel.id
        GROUP BY k.id ORDER BY k.tingkat, k.nama`
     )
     .all();
   return c.json({
     total_kelas: one("SELECT COUNT(*) n FROM kelas"),
-    total_kelompok: one("SELECT COUNT(*) n FROM kelompok"),
-    total_siswa: one("SELECT COUNT(*) n FROM siswa"),
+    total_kelompok: one("SELECT COUNT(*) n FROM kelompok") + one("SELECT COUNT(*) n FROM senam_kelompok"),
+    total_siswa: one("SELECT COUNT(*) n FROM siswa") + one("SELECT COUNT(*) n FROM senam_anggota"),
     total_juri: one("SELECT COUNT(*) n FROM juri"),
-    total_penilaian: one("SELECT COUNT(*) n FROM penilaian"),
-    total_foto: one("SELECT COUNT(*) n FROM foto"),
+    total_penilaian: one("SELECT COUNT(*) n FROM penilaian") + one("SELECT COUNT(*) n FROM senam_penilaian"),
+    total_foto: one("SELECT COUNT(*) n FROM foto") + one("SELECT COUNT(*) n FROM senam_foto"),
     per_kelas: perKelas,
   });
 });
 
 // ---------------------------------------------------------------- kelas
 sec("get", "/kelas", (c) => {
+  // Sama seperti dasbor: gabungkan projek + senam (perbaikan 2026-10-31).
   const rows = getDb()
     .query(
-      `SELECT k.*, COUNT(DISTINCT kel.id) AS jml_kelompok, COUNT(s.id) AS jml_siswa
-       FROM kelas k LEFT JOIN kelompok kel ON kel.kelas_id = k.id
-       LEFT JOIN siswa s ON s.kelompok_id = kel.id
+      `SELECT k.*,
+              (SELECT COUNT(*) FROM kelompok WHERE kelas_id = k.id)
+                + (SELECT COUNT(*) FROM senam_kelompok WHERE kelas_id = k.id) AS jml_kelompok,
+              (SELECT COUNT(*) FROM siswa s JOIN kelompok kel ON kel.id = s.kelompok_id WHERE kel.kelas_id = k.id)
+                + (SELECT COUNT(*) FROM senam_anggota s JOIN senam_kelompok kel ON kel.id = s.kelompok_id WHERE kel.kelas_id = k.id) AS jml_siswa
+       FROM kelas k
        GROUP BY k.id ORDER BY k.tingkat, k.nama`
     )
     .all();

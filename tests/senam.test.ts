@@ -334,15 +334,21 @@ describe("senam: hasil, peringkat, CSV, berita acara", () => {
 
 // ---------------------------------------------------------------------------
 describe("senam: tidak mencemari asesmen projek", () => {
-  test("dashboard projek tidak menghitung data senam", async () => {
+  test("dasbor menggabungkan projek + senam (keputusan 2026-10-31)", async () => {
     const cookie = await loginAdmin();
     const res = await app.request("/api/dashboard", { headers: { cookie } });
     expect(res.status).toBe(200);
     const d = await res.json();
-    // Di file test ini hanya dibuat 1 kelompok projek (uji nama sama di atas);
-    // kelompok senam ada 4 dan penilaian senam ada banyak — tidak boleh terhitung.
-    expect(d.total_kelompok).toBe(1);
-    expect(d.total_penilaian).toBe(0);
+    // PERUBAHAN PERILAKU (disetujui Pak Gun 2026-10-31, perbaikan dasbor
+    // kelas 7 yang selalu 0): dasbor/rekap BUKAN hasil asesmen, jadi ia
+    // sengaja menjumlahkan kedua modul. Di file test ini: 1 kelompok
+    // projek + 4 kelompok senam; penilaian senam 20 baris (4 Tim Garuda
+    // + 16 SA/SB); foto senam sudah dihapus di tes sebelumnya (0).
+    // Pemisahan tetap berlaku untuk hasil/nilai/kategori/foto asesmen —
+    // lihat tes-tes lain di berkas ini (hasil projek kelas tanpa kelompok
+    // projek tetap kosong, dst.), yang tidak diubah.
+    expect(d.total_kelompok).toBe(5);
+    expect(d.total_penilaian).toBe(20);
     expect(d.total_foto).toBe(0);
   });
 
