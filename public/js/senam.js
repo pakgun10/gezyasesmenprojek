@@ -367,6 +367,68 @@
     } catch (e) { handleErr(e); }
   }
 
+  // ---------- kompresi foto ke WebP sebelum upload ----------
+  // Sama seperti halaman projek: foto kamera diperkecil di HP penilai
+  // jadi WebP sisi terpanjang maks 1600px, kualitas 0.82. Kegagalan
+  // kompresi tidak pernah menggagalkan upload — file asli dikirim.
+  // File kecil (<= 300 KB) tidak dikompres.
+  function kompresFotoKeWebP(file) {
+    return new Promise(function (resolve) {
+      var done = function (f) { resolve(f); };
+      try {
+        if (!file || !file.type || file.type.indexOf("image/") !== 0) return done(file);
+        if (file.type === "image/svg+xml") return done(file);
+        if (file.size <= 300 * 1024) return done(file);
+        var url = URL.createObjectURL(file);
+        var selesai = function (bitmap) {
+          try {
+            var w = bitmap.width || bitmap.naturalWidth;
+            var h = bitmap.height || bitmap.naturalHeight;
+            if (!w || !h) return done(file);
+            var skala = Math.min(1, 1600 / Math.max(w, h));
+            var cw = Math.max(1, Math.round(w * skala));
+            var ch = Math.max(1, Math.round(h * skala));
+            var canvas = document.createElement("canvas");
+            canvas.width = cw;
+            canvas.height = ch;
+            var ctx = canvas.getContext("2d");
+            if (!ctx) return done(file);
+            ctx.drawImage(bitmap, 0, 0, cw, ch);
+            if (bitmap.close) { try { bitmap.close(); } catch (e) {} }
+            canvas.toBlob(function (blob) {
+              if (!blob || blob.size >= file.size) return done(file);
+              var dasar = file.name.replace(/\.[^.]*$/, "") || "foto";
+              done(new File([blob], dasar + ".webp", { type: "image/webp" }));
+            }, "image/webp", 0.82);
+          } catch (e) {
+            done(file);
+          } finally {
+            URL.revokeObjectURL(url);
+          }
+        };
+        if (typeof createImageBitmap === "function") {
+          var p = null;
+          try { p = createImageBitmap(file, { imageOrientation: "from-image" }); } catch (e) { p = null; }
+          if (p && typeof p.then === "function") {
+            p.then(selesai, function () {
+              var img = new Image();
+              img.onload = function () { selesai(img); };
+              img.onerror = function () { URL.revokeObjectURL(url); done(file); };
+              img.src = url;
+            });
+            return;
+          }
+        }
+        var img2 = new Image();
+        img2.onload = function () { selesai(img2); };
+        img2.onerror = function () { URL.revokeObjectURL(url); done(file); };
+        img2.src = url;
+      } catch (e) {
+        done(file);
+      }
+    });
+  }
+
   $("btn-upload").addEventListener("click", async function () {
     var files = $("foto-input").files;
     var info = $("upload-info");
@@ -377,17 +439,19 @@
     btn.disabled = true;
     var sukses = 0, gagal = [];
     for (var i = 0; i < files.length; i++) {
+      info.textContent = "Mengompres " + (i + 1) + "/" + files.length + "…";
+      var uploadFile = await kompresFotoKeWebP(files[i]);
       info.textContent = "Mengunggah " + (i + 1) + "/" + files.length + "…";
       var fd = new FormData();
       fd.append("kelompok_id", String(state.kelompokId));
       fd.append("caption", caption);
-      fd.append("foto", files[i], files[i].name);
+      fd.append("foto", uploadFile, uploadFile.name);
       try {
         var r = await apiUpload(fd);
         state.fotoSaya.push({ id: r.id, filename: r.filename, caption: caption, uploaded_at: "" });
         sukses++;
       } catch (e) {
-        if (e.status === 401) { toLogin(); return; }
+        if (e.status === 401) { btn.disabled = false; toLogin(); return; }
         gagal.push(files[i].name + ": " + e.message);
       }
     }
